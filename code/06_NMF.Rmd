@@ -34,7 +34,7 @@ library(ggplotify)
 # Load data
 
 ```{r}
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/clustering_input/imputed_data.RData")
+load("./data/duplicate_input/imputed_data.RData")
 
 #par(mfrow = c(2,4))
 lapply(norm.impute, function(x) plot(density(apply(x, 2, as.numeric)), main = ""))
@@ -201,7 +201,7 @@ nmf_basis <- function(data, rank = 3, meta.data, meta.col = c("group", "concentr
 w <- nmf_basis(norm.impute, 3, meta.data, "group", print.heatmap = T, seed = 3)
 
 nmf_basis(norm.impute, 3, meta.data, "group", print.heatmap = T, seed = 3)
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_heatmap_WITH_dupes.png", width = 24, height = 16, dpi = 600)
+ggsave("./outputs/NMF_heatmap_WITH_dupes.png", width = 24, height = 16, dpi = 600)
 ```
 
 # Validate that clusters are according to sample group
@@ -241,7 +241,7 @@ nmf_cluster <- function(w, meta.data){
 }
 
 nmf_cluster(w$w, meta.data)
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_cluster_correlations_WITH_dupes.png", width = 12, height = 8, dpi = 600)
+ggsave("./outputs/NMF_cluster_correlations_WITH_dupes.png", width = 12, height = 8, dpi = 600)
 
 ```
 
@@ -360,7 +360,7 @@ h <- nmf_feats(norm.impute, rank = 3, meta.data, meta.col = "group")
 ## save list of features for biomarker filtering
 
 ```{r}
-save(h, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_features_WITH_dupes.RData")
+save(h, comp.found.na.filter, file = "./data/biomarker_input/NMF_features_WITH_dupes.RData")
 ```
 
 # Run model X times to validate
@@ -394,71 +394,4 @@ iteration.cor$average <- rowMeans(iteration.cor)
 iteration.cor$average
 iteration.cor$std.dev
 
-```
-
-```{r}
-data.8 <- norm.impute$Lab8
-
-# Based on features that contribute a lot to each rank
-all.means <- colMeans(data.8)
-
-mean.8 <- c()
-
-for(i in 1:ncol(data.8)){
-  
-  if(colnames(data.8)[i] %in% high.8){
-    mean.8[i] <- colMeans(data.8)[i]
-  }else{next}
-  
-}
-
-mean.8 <- mean.8[which(colnames(data.8) %in% high.8)]
-
-boxplot(all.means)
-boxplot(mean.8)
-
-# boxplots based on features with high coefficients
-
-par(mfrow = c(2, 4))
-for(i in 1:length(norm.impute)){
-  
-  res <- nmf(log2(norm.impute[[i]]), rank = 3)
-  h.i <- res@fit@H
-  h.i.means <- colMeans(h.i)
-  max.h.i <- log2(norm.impute[[i]])[,which(h.i.means > quantile(h.i.means, 0.75))]
-  
-  boxplot(max.h.i)
-  
-}
-
-par(mfrow = c(2,4))
-lapply(norm.impute, boxplot)
-
-# abundance relationship with coefficients
-
-set.seed(3)
-par(mfrow = c(2, 4))
-for(i in 1:length(norm.impute)){
-  
-  res <- nmf(log2(norm.impute[[i]]), rank = 3)
-  h.i <- res@fit@H
-  h.i.means <- colMeans(h.i)
-  data.i.means <- colMeans(log2(norm.impute[[i]]))
-  
-  plot(data.i.means ~ h.i.means)
-  
-}
-
-set.seed(3)
-par(mfrow = c(2, 4))
-for(i in 1:length(norm.impute)){
-  
-  res <- nmf(norm.impute[[i]], rank = 3)
-  h.i <- res@fit@H
-  h.i.means <- colMeans(h.i)
-  data.i.means <- colMeans(norm.impute[[i]])
-  
-  plot(data.i.means ~ h.i.means)
-  
-}
 ```

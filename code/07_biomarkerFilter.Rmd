@@ -12,9 +12,9 @@ knitr::opts_chunk$set(echo = TRUE)
 # Load data
 
 ```{r}
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/ANOVA_features_WITH_duplicates.RData")
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/PCA_features_WITHduplicates.RData")
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_features_WITH_dupes.RData")
+load("./data/biomarker_input/ANOVA_features_WITH_duplicates.RData")
+load("./data/biomarker_input/PCA_features_WITHduplicates.RData")
+load("./data/biomarker_input/NMF_features_WITH_dupes.RData")
 ```
 
 # Load packages
@@ -33,7 +33,7 @@ invisible(lapply(packages, library, character.only = TRUE))
 ```
 
 # ANOVA features filter
-features with top 10% of lowest adjusted p-values
+features with adjusted p-values < 0.05
 
 ```{r}
 anova.feats <- list(length(anova.results))
@@ -260,7 +260,7 @@ for(i in 1:length(mf)){
 }
 
 
-write.csv(results.df, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/important_features_WITH_duplicates.csv", row.names = F)
+write.csv(results.df, file = "./data/biomarker_input/important_features_WITH_duplicates.csv", row.names = F)
 ```
 
 ## How many metabolites were significant in at least one analysis in X labs?
@@ -293,7 +293,7 @@ for(i in 1:nrow(n.sig.analyses)){
 # Boxplots of features significant in at least 1 analysis in all 8 labs
 
 ```{r}
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+load("./data/duplicate_input/imputed_data.RData")
 
 metabs.8 <- unique(results.df$MF[which(results.df$total.lab == 8)])
 
@@ -301,7 +301,7 @@ metab.boxplot <- function(norm.impute, metab){
   # norm.impute = input data for boxplots
   # metab = index of metabolite to plot from list (like metabs.8)
   
-png(paste0("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/biomarker_boxplots_", metab, ".png"), width = 1600, height = 400)
+png(paste0("./outputs/biomarker_boxplots_", metab, ".png"), width = 1600, height = 400)
 par(mfrow = c(1, 8))
   
   for(lab in 1:length(norm.impute)){
@@ -350,7 +350,7 @@ lapply(metabs.8, function(x) metab.boxplot(norm.impute, x))
 # Heatmap of figures significant in at least 1 analysis in all 8 labs
 
 ```{r}
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+load("./data/duplicate_input/imputed_data.RData")
 
 metabs.8 <- unique(results.df$MF[which(results.df$total.lab == 8)])
 
@@ -433,7 +433,7 @@ heatmaps <- lapply(c("Lab1", "Lab2", "Lab3", "Lab4", "Lab5", "Lab6", "Lab7", "La
                     function(x) subset.heatmap(lab.subset.data, x, meta.data))
 heat.arrange <- ggarrange(plotlist = heatmaps, nrow = 2, ncol = 4, common.legend = T)
 
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/biomarker_heatmap.png", heat.arrange, width = 6, height = 4, dpi = 300, units = "in")
+ggsave("./outputs/biomarker_heatmap.png", heat.arrange, width = 6, height = 4, dpi = 300, units = "in")
 ```
 
 

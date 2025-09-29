@@ -16,7 +16,7 @@ Run ANOVA on all filtered and prepared data sets (normalized and ratio) and extr
 # Load data
 
 ```{r}
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+load("./data/duplicate_input/imputed_data.RData")
 
 norm.log <- lapply(norm.impute, log2)
 ```
@@ -75,5 +75,5 @@ for(i in 1:length(anova.results)){
 # Save results for filtering in biomarker rmd
 
 ```{r}
-save(anova.results, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/anova_features_WITH_duplicates.RData")
+save(anova.results, comp.found.na.filter, file = "./data/biomarker_input/anova_features_WITH_duplicates.RData")
 ```

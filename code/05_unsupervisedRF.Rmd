@@ -7,7 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code") 
+knitr::opts_knit$set(root.dir = ".") 
 ```
 
 # Unsupervised Random Forest clustering of Round Robin labs
@@ -28,11 +28,11 @@ if(!require("cluster")){
   library(cluster)
 }
 
-source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/plotting_functions.R")
-source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/reproducibility_functions.R")
-source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/summary_functions.R")
+source("./code/plotting_functions.R")
+source("./code/reproducibility_functions.R")
+source("./code/summary_functions.R")
 
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/clustering_input/duplicated_filtered_data.RData")
+load("./data/clustering_input/duplicated_filtered_data.RData")
 ```
 
 ## Run Unsupervised RF on each lab
@@ -74,7 +74,7 @@ mds <- lapply(dists, function(x) cmdscale(x, k = 2)) # try k-means to get cluste
 mds.group.colors <- lapply(mds, function(x) cbind(x, meta.data.new$group.color))
 
 # plot mds
-png("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/unsupervisedRF_clusters_WITHdupes.png", width = 8, height = 4, units = "in", res = 600)
+png("./outputs/unsupervisedRF_clusters_WITHdupes.png", width = 8, height = 4, units = "in", res = 600)
 par(mfrow = c(2, 4), mgp = c(1.5,0.5,0), mar = c(3,3,2,2))
 mapply(function (x, y) plot(x, pch=16, xlab="Dim1", ylab="Dim2", col = meta.data.new$group.color, cex = 1, main=paste(y)), mds.group.colors, names(mds.group.colors))
 ```

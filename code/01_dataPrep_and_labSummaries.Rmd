@@ -11,19 +11,19 @@ This code takes the CF preprocessed data from all labs and computes summary metr
 
 ```{r setup, echo = FALSE, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code")
+knitr::opts_knit$set(root.dir = ".")
 ```
 
 # Load functions and packages
 
 ```{r, message=FALSE}
-source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/summary_functions.R")
+source("./code/summary_functions.R")
 ```
 
 # Load lab data and compounds found
 
 ```{r}
-path <- "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/original_input"
+path <- "./data/original_input"
 
 lab.names <- list.files(path = path, "Lab", full.names = T, recursive = F)
 
@@ -55,7 +55,7 @@ comp.found <- read.results(path = path, file.text = "_Norm", sheet.text = "Cmpds
 
 ## read in map of sample numbers to descriptive names
 
-master.map <- read.csv("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/original_input/sample_description_map.csv", header = T)
+master.map <- read.csv("./data/original_input/sample_description_map.csv", header = T)
 
 norm.results <- map.samples(path, "_Norm", "Design", master.map, norm.results)
 sc.results <- map.samples(path, "_Norm", "Design", master.map, sc.results)
@@ -139,7 +139,7 @@ mstus.impute <- lapply(raw.impute, function (x) mstus(x, low.boun = 0.2, high.bo
 # Save filtered and imputed data as RData for other analyses
 
 ```{r}
-save(norm.impute, sc.impute, raw.impute, ratio.impute, mstus.impute, comp.found.na.filter, meta.data, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+save(norm.impute, sc.impute, raw.impute, ratio.impute, mstus.impute, comp.found.na.filter, meta.data, file = "./data/duplicate_input/imputed_data.RData")
 ```
 
 # Create a table of numbers and types of annotated bins found for each lab
@@ -160,7 +160,7 @@ sc.int <- intensity.box(sc.impute, "suppression-corrected")
 raw.int <- intensity.box(raw.impute, "IROA raw")
 
 int.arrange <- ggarrange(raw.int, sc.int, norm.int, ncol = 3, nrow = 1, common.legend = T)
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/total_intensity_boxplots.png", width = 30, height = 10)
+ggsave("./outputs/total_intensity_boxplots.png", width = 30, height = 10)
 ```
 
 # Plot distribution of sample pair correlations 
@@ -225,7 +225,7 @@ colnames(norm.combo.melt) <- c("Lab", "Correlation", "Pair Type")
             text = element_text(size = 15)) + 
       ggtitle("Sample Correlations in True Duplicates and Random Pairs") 
     
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/boxplots_duplicate_correlations.png", width = 6, height = 4, dpi = 600)
+ggsave("./outputs/boxplots_duplicate_correlations.png", width = 6, height = 4, dpi = 600)
 
 
 # SC
@@ -313,7 +313,7 @@ colnames(raw.combo.melt) <- c("Lab", "Correlation", "Pair Type")
       ggtitle("Raw - Sample Correlations in True Duplicates and Random Pairs") 
 ```
 
-### check Lab 3 correlations
+### check Lab 3 low correlation pairs
 
 ```{r}
 lab3.ab <- t(norm.impute$Lab3[7,])

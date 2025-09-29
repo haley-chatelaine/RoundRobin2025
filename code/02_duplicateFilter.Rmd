@@ -7,7 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code")
+knitr::opts_knit$set(root.dir = ".")
 ```
 
 This code removes feature duplicates from lab data and selects the most likely correctly identified feature based on:
@@ -18,17 +18,17 @@ This code removes feature duplicates from lab data and selects the most likely c
 # Load functions
 
 ```{r}
-source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/plotting_functions.R")
-source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/reproducibility_functions.R")
-source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/summary_functions.R")
-source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/duplicate_functions.R")
+source("./code/plotting_functions.R")
+source("./code/reproducibility_functions.R")
+source("./code/summary_functions.R")
+source("./code/duplicate_functions.R")
 ```
 
 # Load data
 
 ```{r}
 # ClusterFinder Data
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+load("./data/duplicate_input/imputed_data.RData")
 
 # Lab RT Standards Data
 multiplesheets <- function(path) { 
@@ -44,7 +44,7 @@ multiplesheets <- function(path) {
   return(data_frame)
 } 
 
-lab.rts <- multiplesheets("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/overlapmetabs_RT_allLabs.xlsx")
+lab.rts <- multiplesheets("./data/duplicate_input/overlapmetabs_RT_allLabs.xlsx")
 ```
 
 # Create RT indexes for each lab
@@ -82,12 +82,12 @@ int.retain.frac <- int.filter(int.list.frac, rt.type = "rt.fraction")
 # without standards
 
 inchi.int.plots <- htmltools::tagList(lapply(rt.distrib(comp.found.rt, "InChiKey2D", int.retain.frac, rt.type = "rt.fraction", append.name = T, add.flags = T), function(x) div(x, style = "float:left;width:50%;")))
-htmltools::save_html(inchi.int.plots, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/rt_fraction_distribution_intensity_retain.html")
+htmltools::save_html(inchi.int.plots, file = "./outputs/rt_fraction_distribution_intensity_retain.html")
 
 # with standards 
 
 inchi.int.plots <- htmltools::tagList(lapply(rt.distrib(comp.found.rt, "InChiKey2D", int.retain.frac, rt.type = "rt.fraction", lab.rts, append.name = T, add.flags = T), function(x) div(x, style = "float:left;width:50%;")))
-htmltools::save_html(inchi.int.plots, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/rt_fraction_distribution_intensity_retain_WITH_standards.html")
+htmltools::save_html(inchi.int.plots, file = "./outputs/rt_fraction_distribution_intensity_retain_WITH_standards.html")
 
 ```
 
@@ -216,18 +216,18 @@ for(i in 1:length(rt.retain)){
 
 # plot
 inchi.rt.plots <- htmltools::tagList(lapply(rt.distrib(comp.found.rt, "InChiKey2D", rt.retain, rt.type = "rt.fraction", lab.rts, append.name = T, add.flags = T), function(x) div(x, style = "float:left;width:50%;")))
-htmltools::save_html(inchi.rt.plots, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/RTDistributions_fullfilter_WITH_standards_final.html")
+htmltools::save_html(inchi.rt.plots, file = "./outputs/RTDistributions_fullfilter_WITH_standards_final.html")
 
 
 match.types <- match.distrib(comp.std)
 match.types
-htmltools::save_html(match.types, file ="/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/match_type_distribution.html")
+htmltools::save_html(match.types, file ="./outputs/match_type_distribution.html")
 ```
 
 # Save filtered data as RData
 
 ```{r}
-save(norm.std, comp.std, ratio.std, raw.std, sc.std, mstus.std, meta.data, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/reproducibility_input/duplicated_filtered_data.RData")
+save(norm.std, comp.std, ratio.std, raw.std, sc.std, mstus.std, meta.data, file = "./data/reproducibility_input/duplicated_filtered_data.RData")
 ```
 
 # Send workbook of retained features and bin numbers for manual comparison
@@ -235,7 +235,7 @@ save(norm.std, comp.std, ratio.std, raw.std, sc.std, mstus.std, meta.data, file 
 ```{r}
 comp.report <- lapply(comp.std, function(x) rownames_to_column(x, var = "binName") )
 
-write.xlsx(comp.report, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/retained_bins.xlsx")
+write.xlsx(comp.report, file = "./outputs/retained_bins.xlsx")
 
 ```
 
@@ -269,7 +269,7 @@ for(lab in 1:length(std.feats)){
     }
 }
 
-write.xlsx(std.feats, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/standards_and_retained_bins.xlsx")
+write.xlsx(std.feats, file = "./outputs/standards_and_retained_bins.xlsx")
 
 ```
 
