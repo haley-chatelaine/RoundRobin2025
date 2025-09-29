@@ -1,0 +1,337 @@
+---
+title: "RoundRobin_lab_summaries"
+author: "Haley"
+date: "2024-11-06"
+output: html_document
+---
+# Round Robin Summary Figures - All Features from All Labs
+
+This code takes the CF preprocessed data from all labs and computes summary metrics and figures
+
+
+```{r setup, echo = FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code")
+```
+
+# Load functions and packages
+
+```{r, message=FALSE}
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/summary_functions.R")
+```
+
+# Load lab data and compounds found
+
+```{r}
+path <- "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/original_input"
+
+lab.names <- list.files(path = path, "Lab", full.names = T, recursive = F)
+
+# Normalized metabolite abundances
+
+norm.results <- read.results(path = path, file.text = "_Norm", sheet.text = "C12-Norm")
+
+# Suppression-corrected metabolite abundances
+
+sc.results <- read.results(path = path, file.text = "_Norm", sheet.text = "C12-SC")
+
+# Raw metabolite abundances
+
+raw.results <- read.results(path = path, file.text = "_Norm", sheet.text = "C12-Clean")
+
+# C13/C12 Ratio
+
+ratio.results <- read.results(path = path, file.text = "_Norm", sheet.text = "Ratio")
+
+# Compounds found
+
+comp.found <- read.results(path = path, file.text = "_Norm", sheet.text = "Cmpds")
+```
+
+# Map sample descriptions within each lab to data and create general meta data
+
+```{r}
+# Map sample numbers ("S###") to descriptive names (group_concentration_rep)
+
+## read in map of sample numbers to descriptive names
+
+master.map <- read.csv("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/original_input/sample_description_map.csv", header = T)
+
+norm.results <- map.samples(path, "_Norm", "Design", master.map, norm.results)
+sc.results <- map.samples(path, "_Norm", "Design", master.map, sc.results)
+raw.results <- map.samples(path, "_Norm", "Design", master.map, raw.results)
+ratio.results <- map.samples(path, "_Norm", "Design", master.map, ratio.results)
+
+meta.data <- create.meta(norm.results)
+```
+
+# Add metabolite names
+
+```{r}
+norm.named <- map.metabs(comp.found, norm.results, "Name")
+sc.named <- map.metabs(comp.found, sc.results, "Name")
+raw.named <- map.metabs(comp.found, raw.results, "Name")
+ratio.named <- map.metabs(comp.found, ratio.results, "Name")
+```
+
+# Change 1s to 0s so counted as missing values
+
+```{r}
+norm.1to0 <- one.to.zero(norm.named)
+sc.1to0 <- one.to.zero(sc.named)
+raw.1to0 <- one.to.zero(raw.named)
+```
+
+# Report numbers of missing values across labs
+
+```{r}
+norm.miss <- n.miss(norm.named, report = T) 
+sc.miss <- n.miss(sc.named, report = T) 
+raw.miss <- n.miss(raw.named, report = T) 
+ratio.miss <- n.miss(ratio.named, report = T) 
+    # note that "1" in other data = internal standard found but C12 not, and "0" = internal standard not found, so the number of 0's in the ratio data will match the number of 1's in the other data
+
+#mapply(function (x, y) (hist(x$total, breaks = 100, main = y)), norm.miss, names(norm.miss))
+```
+
+# Filter by presence in replicate samples (must be present in both)
+
+```{r}
+norm.rep.filter <- rep.remove(norm.1to0)
+sc.rep.filter <- rep.remove(sc.1to0)
+raw.rep.filter <- rep.remove(raw.1to0)
+comp.found.rep.filter <- rep.remove(norm.1to0, comp.found = comp.found)
+
+ratio.rep.filter <- rep.remove(norm.1to0, ratio.list = ratio.named)
+```
+
+# Filter by percentage of NAs (so that it passes KNN checks later)
+
+```{r}
+norm.na.filter <- na.perc.remove(norm.rep.filter, 0.5)
+sc.na.filter <- na.perc.remove(sc.rep.filter, 0.5)
+raw.na.filter <- na.perc.remove(raw.rep.filter, 0.5)
+comp.found.na.filter <- na.perc.remove(norm.rep.filter, 0.5, comp.found.rep.filter)
+
+# none filtered, so ratio.na.filter is the same as ratio
+ratio.na.filter <- ratio.rep.filter
+```
+
+# Impute all missing values with KNN for 0s and half minimum for 1s
+
+```{r}
+norm.impute <- impute.both(norm.na.filter, norm.named)
+sc.impute <- impute.both(sc.na.filter, sc.named)
+raw.impute <- impute.both(raw.na.filter, raw.named)
+
+# impute ratio missing values using half-min, because, as far as I can tell on June 12, 2024, 0s in ratios = 1s in abundance
+ratio.impute <- impute.halfmin(ratio.na.filter)
+```
+
+# Apply MSTUS to raw data for comparison with normalized/sc data
+
+```{r}
+mstus.impute <- lapply(raw.impute, function (x) mstus(x, low.boun = 0.2, high.bound = 0.95))
+   
+# check with Chris's MSTUS method   
+```
+
+# Save filtered and imputed data as RData for other analyses
+
+```{r}
+save(norm.impute, sc.impute, raw.impute, ratio.impute, mstus.impute, comp.found.na.filter, meta.data, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+```
+
+# Create a table of numbers and types of annotated bins found for each lab
+
+```{r}
+original.bins <- count.bins(comp.found)
+original.bins
+
+filter.bins <- count.bins(comp.found.na.filter)
+filter.bins
+```
+
+# Create box plots of total intensity across labs
+
+```{r}
+norm.int <- intensity.box(norm.impute, "normalized", log2 = T)
+sc.int <- intensity.box(sc.impute, "suppression-corrected")
+raw.int <- intensity.box(raw.impute, "IROA raw")
+
+int.arrange <- ggarrange(raw.int, sc.int, norm.int, ncol = 3, nrow = 1, common.legend = T)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/total_intensity_boxplots.png", width = 30, height = 10)
+```
+
+# Plot distribution of sample pair correlations 
+## Calculate correlations of replicates within each lab
+
+```{r}
+norm.cor <- cor.dupes(norm.impute)
+sc.cor <- cor.dupes(sc.impute)
+raw.cor <- cor.dupes(raw.impute)
+```
+
+## Calculate correlations of random pairs
+
+```{r}
+norm.rando <- cor.rando(norm.impute, 480)
+sc.rando <- cor.rando(sc.impute, 480)
+raw.rando <- cor.rando(raw.impute, 480)
+```
+
+## Plot box plots of duplicates vs. random pairs
+
+```{r}
+# Normalized
+## wrangle
+### make random correlations a data frame
+norm.rando.data <- data.frame(matrix(nrow = nrow(norm.rando[[1]]), ncol = length(norm.rando)))
+colnames(norm.rando.data) <- names(norm.rando)
+row.names(norm.rando.data) <- norm.rando[[1]]$pair
+
+for(i in 1:length(norm.rando)){
+  
+  norm.rando.data[,i] <- norm.rando[[i]]$correlation
+  
+}
+
+norm.rando.melt <- reshape2::melt(norm.rando.data)
+norm.rando.melt$type <- "random"
+
+### make duplicate correlations a data frame
+norm.cor.data <- data.frame(matrix(nrow = nrow(norm.cor[[1]]), ncol = length(norm.cor)))
+colnames(norm.cor.data) <- names(norm.cor)
+row.names(norm.cor.data) <- norm.cor[[1]]$sample
+
+for(i in 1:length(norm.cor)){
+  
+  norm.cor.data[,i] <- norm.cor[[i]]$correlation
+  
+}
+
+norm.cor.melt <- reshape2::melt(norm.cor.data)
+norm.cor.melt$type <- "duplicate"
+
+### combine random and duplicate results
+norm.combo.melt <- rbind(norm.rando.melt, norm.cor.melt)
+colnames(norm.combo.melt) <- c("Lab", "Correlation", "Pair Type")
+
+## plot
+    ggplot(norm.combo.melt, aes(x = Lab, y = Correlation)) + 
+      geom_boxplot(aes(fill = `Pair Type`)) +
+      theme_classic() +
+      theme(axis.title.x = element_blank(),
+            text = element_text(size = 15)) + 
+      ggtitle("Sample Correlations in True Duplicates and Random Pairs") 
+    
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/boxplots_duplicate_correlations.png", width = 6, height = 4, dpi = 600)
+
+
+# SC
+## wrangle
+### make random correlations a data frame
+sc.rando.data <- data.frame(matrix(nrow = nrow(sc.rando[[1]]), ncol = length(sc.rando)))
+colnames(sc.rando.data) <- names(sc.rando)
+row.names(sc.rando.data) <- sc.rando[[1]]$pair
+
+for(i in 1:length(sc.rando)){
+  
+  sc.rando.data[,i] <- sc.rando[[i]]$correlation
+  
+}
+
+sc.rando.melt <- reshape2::melt(sc.rando.data)
+sc.rando.melt$type <- "random"
+
+### make duplicate correlations a data frame
+sc.cor.data <- data.frame(matrix(nrow = nrow(sc.cor[[1]]), ncol = length(sc.cor)))
+colnames(sc.cor.data) <- names(sc.cor)
+row.names(sc.cor.data) <- sc.cor[[1]]$sample
+
+for(i in 1:length(sc.cor)){
+  
+  sc.cor.data[,i] <- sc.cor[[i]]$correlation
+  
+}
+
+sc.cor.melt <- reshape2::melt(sc.cor.data)
+sc.cor.melt$type <- "duplicate"
+
+### combine random and duplicate results
+sc.combo.melt <- rbind(sc.rando.melt, sc.cor.melt)
+colnames(sc.combo.melt) <- c("Lab", "Correlation", "Pair Type")
+
+## plot
+    ggplot(sc.combo.melt, aes(x = Lab, y = Correlation)) + 
+      geom_boxplot(aes(fill = `Pair Type`)) +
+      theme_classic() +
+      theme(axis.title.x = element_blank(),
+            text = element_text(size = 15)) + 
+      ggtitle("SC - Sample Correlations in True Duplicates and Random Pairs") 
+
+# Raw
+## wrangle
+### make random correlations a data frame
+raw.rando.data <- data.frame(matrix(nrow = nrow(raw.rando[[1]]), ncol = length(raw.rando)))
+colnames(raw.rando.data) <- names(raw.rando)
+row.names(raw.rando.data) <- raw.rando[[1]]$pair
+
+for(i in 1:length(raw.rando)){
+  
+  raw.rando.data[,i] <- raw.rando[[i]]$correlation
+  
+}
+
+raw.rando.melt <- reshape2::melt(raw.rando.data)
+raw.rando.melt$type <- "random"
+
+### make duplicate correlations a data frame
+raw.cor.data <- data.frame(matrix(nrow = nrow(raw.cor[[1]]), ncol = length(raw.cor)))
+colnames(raw.cor.data) <- names(raw.cor)
+row.names(raw.cor.data) <- raw.cor[[1]]$sample
+
+for(i in 1:length(raw.cor)){
+  
+  raw.cor.data[,i] <- raw.cor[[i]]$correlation
+  
+}
+
+raw.cor.melt <- reshape2::melt(raw.cor.data)
+raw.cor.melt$type <- "duplicate"
+
+### combine random and duplicate results
+raw.combo.melt <- rbind(raw.rando.melt, raw.cor.melt)
+colnames(raw.combo.melt) <- c("Lab", "Correlation", "Pair Type")
+
+## plot
+    ggplot(raw.combo.melt, aes(x = Lab, y = Correlation)) + 
+      geom_boxplot(aes(fill = `Pair Type`)) +
+      theme_classic() +
+      theme(axis.title.x = element_blank(),
+            text = element_text(size = 15)) + 
+      ggtitle("Raw - Sample Correlations in True Duplicates and Random Pairs") 
+```
+
+### check Lab 3 correlations
+
+```{r}
+lab3.ab <- t(norm.impute$Lab3[7,])
+lab3.ab <- as.data.frame(cbind(lab3.ab, t(norm.impute$Lab3[8,])))
+row.names(lab3.ab) <- colnames(norm.impute$Lab3)
+
+attach(lab3.ab)
+plot(ab_0.3_rep1, ab_0.3_rep2)
+text(ab_0.3_rep1, ab_0.3_rep2, row.names(lab3.ab), cex = 0.7)
+
+lab3.bc <- t(norm.impute$Lab3[25,])
+lab3.bc <- as.data.frame(cbind(lab3.bc, t(norm.impute$Lab3[26,])))
+row.names(lab3.bc) <- colnames(norm.impute$Lab3)
+
+#lab3.bc <- lab3.bc[-(which(lab3.bc$bc_0.3_rep1 > quantile(lab3.bc$bc_0.3_rep1, 0.95))),]
+
+attach(lab3.bc)
+plot(bc_0.5_rep1, bc_0.5_rep2)
+text(bc_0.5_rep1, bc_0.5_rep2, row.names(lab3.bc), cex = 0.7)
+ 
+```

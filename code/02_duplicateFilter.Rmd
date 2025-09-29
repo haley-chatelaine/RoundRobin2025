@@ -1,0 +1,277 @@
+---
+title: "20240304_RoundRobin_duplicate_removal"
+author: "Haley"
+date: "2024-03-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code")
+```
+
+This code removes feature duplicates from lab data and selects the most likely correctly identified feature based on:
+- confidence level of ID assigned <- nvm, most repeat IDs have the same confidence level
+- high correlation of feature abundance between labs (logic: features that are highly correlated are likely the same)
+- relatively similar retention time indexes across labs
+
+# Load functions
+
+```{r}
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/plotting_functions.R")
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/reproducibility_functions.R")
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/summary_functions.R")
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/duplicate_functions.R")
+```
+
+# Load data
+
+```{r}
+# ClusterFinder Data
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+
+# Lab RT Standards Data
+multiplesheets <- function(path) { 
+   
+  # getting info about all excel sheets 
+  sheets <- readxl::excel_sheets(path) 
+  tibble <- lapply(sheets, function(x) readxl::read_excel(path, sheet = x)) 
+  data_frame <- lapply(tibble, as.data.frame) 
+    
+  # assigning names to data frames 
+  names(data_frame) <- sheets 
+
+  return(data_frame)
+} 
+
+lab.rts <- multiplesheets("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/overlapmetabs_RT_allLabs.xlsx")
+```
+
+# Create RT indexes for each lab
+
+```{r}
+comp.found.rt <- rt.index(comp.found.na.filter)
+```
+
+# Remove features that reflect potential fragments
+
+```{r}
+norm.impute <- lapply(norm.impute, function(x) x[,-(which(grepl(" -", colnames(x))))])
+sc.impute <- lapply(sc.impute, function(x) x[,-(which(grepl(" -", colnames(x))))])
+raw.impute <- lapply(raw.impute, function(x) x[,-(which(grepl(" -", colnames(x))))])
+ratio.impute <- lapply(ratio.impute, function(x) x[,-(which(grepl(" -", colnames(x))))])
+mstus.impute <- lapply(mstus.impute, function(x) x[,-(which(grepl(" -", colnames(x))))])
+
+comp.found.rt <- lapply(comp.found.rt, function(x) x[-(which(grepl(" -", x$Name))),])
+```
+
+
+# Select names of features with highest mean intensities in each lab
+
+```{r}
+int.list.frac <- int.calculate(norm.impute, comp.found.rt, "InChiKey2D", rt.type = "rt.fraction")
+int.retain.frac <- int.filter(int.list.frac, rt.type = "rt.fraction")
+
+# for metabolites with standards, select retained feature based on standard data (visual selection using distribution figures, below)
+
+```
+
+# Plot distributions of rt fractions
+
+```{r}
+# without standards
+
+inchi.int.plots <- htmltools::tagList(lapply(rt.distrib(comp.found.rt, "InChiKey2D", int.retain.frac, rt.type = "rt.fraction", append.name = T, add.flags = T), function(x) div(x, style = "float:left;width:50%;")))
+htmltools::save_html(inchi.int.plots, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/rt_fraction_distribution_intensity_retain.html")
+
+# with standards 
+
+inchi.int.plots <- htmltools::tagList(lapply(rt.distrib(comp.found.rt, "InChiKey2D", int.retain.frac, rt.type = "rt.fraction", lab.rts, append.name = T, add.flags = T), function(x) div(x, style = "float:left;width:50%;")))
+htmltools::save_html(inchi.int.plots, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/rt_fraction_distribution_intensity_retain_WITH_standards.html")
+
+```
+
+# Select the value with the highest mean intensity + rt within 1 sd of majority
+
+```{r}
+# Normalized data
+norm.fin <- rt.int.filter.2(comp.found.rt, int.list.frac, norm.impute, rt.type = "rt.fraction")
+
+comp.found.fin <- rt.int.filter.2(comp.found.rt, int.list.frac, norm.impute, rt.type = "rt.fraction", return.comp.found.fin = T)
+
+# Make ratio, raw, and sc data match normalized data
+
+ratio.fin <- rt.int.filter.2(comp.found.rt, int.list.frac, norm.impute, rt.type = "rt.fraction", return.comp.found.fin = F, ratio.list = ratio.impute)
+raw.fin <- rt.int.filter.2(comp.found.rt, int.list.frac, norm.impute, rt.type = "rt.fraction", return.comp.found.fin = F, ratio.list = raw.impute)
+sc.fin <- rt.int.filter.2(comp.found.rt, int.list.frac, norm.impute, rt.type = "rt.fraction", return.comp.found.fin = F, ratio.list = sc.impute)
+mstus.fin <- rt.int.filter.2(comp.found.rt, int.list.frac, norm.impute, rt.type = "rt.fraction", return.comp.found.fin = F, ratio.list = mstus.impute)
+
+```
+
+# Replace features with those closest to standards, if available
+
+```{r, message=FALSE}
+norm.std <- std.match(norm.fin, norm.impute, comp.found.fin, comp.found.rt, lab.rts, ppm = 20, rt = 0.1, "data")
+sc.std <- std.match(sc.fin, sc.impute, comp.found.fin, comp.found.rt, lab.rts, ppm = 20, rt = 0.1, "data")
+raw.std <- std.match(raw.fin, raw.impute, comp.found.fin, comp.found.rt, lab.rts, ppm = 20, rt = 0.1, "data")
+ratio.std <- std.match(ratio.fin, ratio.impute, comp.found.fin, comp.found.rt, lab.rts, ppm = 20, rt = 0.1, "data")
+mstus.std <- std.match(mstus.fin, mstus.impute, comp.found.fin, comp.found.rt, lab.rts, ppm = 20, rt = 0.1, "data")
+
+comp.std <- std.match(norm.fin, norm.impute, comp.found.fin, comp.found.rt, lab.rts, ppm = 20, rt = 0.1, "comp.found")
+
+lapply(comp.std, function(x) table(x$match.type))
+```
+
+# Replace with manual features
+If a feature picked by the algorithm doesn't match with the feature picked by manual inspection and has broad/poor peak shape, replace with the manually inspected feature
+
+```{r}
+# List of manual-override features
+
+manual.feats <- list("Lab3" = data.frame("Metab" = c("L-PHENYLALANINE"), "Lab" = "Lab3", "Bin" = c("LTRS_000475_MDARP-pos")))
+
+# replace row in compound found
+
+comp.manual <- comp.std
+  
+  old.index <- which(grepl(manual.feats$Lab3$Metab[1], comp.manual$Lab3$Name, ignore.case = T))
+  
+   new.index <- which(grepl(manual.feats$Lab3$Bin[1], row.names(comp.found.rt$Lab3), ignore.case = T))
+  
+  comp.manual$Lab3[old.index,] <- c(comp.found.rt$Lab3[new.index,], "L-PHENYLALANINE", "5")
+  
+ row.names(comp.manual$Lab3)[old.index] <- row.names(comp.found.rt$Lab3)[new.index]
+  
+comp.std <- comp.manual
+
+# replace column in data
+
+norm.std$Lab3[,old.index] <- norm.impute$Lab3[,new.index]
+sc.std$Lab3[,old.index] <- sc.impute$Lab3[,new.index]
+raw.std$Lab3[,old.index] <- raw.impute$Lab3[,new.index]
+ratio.std$Lab3[,old.index] <- ratio.impute$Lab3[,new.index]
+mstus.std$Lab3[,old.index] <- mstus.impute$Lab3[,new.index]
+
+```
+
+
+# Plot RT distributions with updated retained features 
+
+```{r}
+# create a new retain list for plotting RT distributions
+rt.retain <- int.retain.frac
+
+for(i in 1:length(rt.retain)){
+  for(j in 1:length(comp.std)){
+   
+    # if a lab has a feature listed for a metabolite in the intensity-retain data
+      # AND that feature is NOT what was retained after filtering for RT and standards, then
+        # replace the retained feature in the rt.retain list with the one that was retained for RT
+    
+    if(!(names(comp.std)[[j]] %in% row.names(rt.retain[[i]]))){next}
+    
+    # add in match type for all
+    
+     if(names(comp.std)[[j]] %in% row.names(rt.retain[[i]]) &
+      
+      length(which(comp.std[[j]]$InChiKey2D == names(rt.retain)[[i]])) != 0){
+       
+          rt.retain[[i]]$match.type[which(row.names(rt.retain[[i]]) == names(comp.std)[[j]])] <- comp.std[[j]]$match.type[which(comp.std[[j]]$InChiKey2D == names(rt.retain)[[i]])]       
+       
+     }   
+    
+    # replace newly matched features
+    
+    if(names(comp.std)[[j]] %in% row.names(rt.retain[[i]]) &
+      
+      !(toupper(rt.retain[[i]]$Feature[which(row.names(rt.retain[[i]]) == names(comp.std)[[j]])]) %in% comp.std[[j]]$Name) &
+      
+      length(which(comp.std[[j]]$InChiKey2D == names(rt.retain)[[i]])) != 0){
+      
+      print(paste(names(comp.std)[[j]], "original:", 
+                  rt.retain[[i]]$Feature[which(row.names(rt.retain[[i]]) == names(comp.std)[[j]])], j, 
+                  "rt filtered:", 
+                  comp.std[[j]]$Name[which(comp.std[[j]]$InChiKey2D == names(rt.retain)[[i]])]))
+      
+            rt.retain[[i]]$Feature[which(row.names(rt.retain[[i]]) == names(comp.std)[[j]])] <- comp.std[[j]]$Name[which(comp.std[[j]]$InChiKey2D == names(rt.retain)[[i]])]
+      
+            rt.retain[[i]]$rt.fraction[which(row.names(rt.retain[[i]]) == names(comp.std)[[j]])] <- comp.std[[j]]$rt.fraction[which(comp.std[[j]]$InChiKey2D == names(rt.retain)[[i]])]
+      
+            rt.retain[[i]]$match.type[which(row.names(rt.retain[[i]]) == names(comp.std)[[j]])] <- comp.std[[j]]$match.type[which(comp.std[[j]]$InChiKey2D == names(rt.retain)[[i]])]
+            
+        # if the compound was filtered out in the rt step, remove
+    
+    if(names(comp.std)[[j]] %in% row.names(rt.retain[[i]]) &
+       
+       !(toupper(rt.retain[[i]]$Feature[which(row.names(rt.retain[[i]]) == names(comp.std)[[j]])]) %in% comp.std[[j]]$Name) &
+       
+       length(which(comp.std[[j]]$InChiKey2D == names(rt.retain)[[i]])) == 0){
+      
+      rt.retain <- rt.retain[-i]
+      
+      }
+    }
+  }
+}
+
+# plot
+inchi.rt.plots <- htmltools::tagList(lapply(rt.distrib(comp.found.rt, "InChiKey2D", rt.retain, rt.type = "rt.fraction", lab.rts, append.name = T, add.flags = T), function(x) div(x, style = "float:left;width:50%;")))
+htmltools::save_html(inchi.rt.plots, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/RTDistributions_fullfilter_WITH_standards_final.html")
+
+
+match.types <- match.distrib(comp.std)
+match.types
+htmltools::save_html(match.types, file ="/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/match_type_distribution.html")
+```
+
+# Save filtered data as RData
+
+```{r}
+save(norm.std, comp.std, ratio.std, raw.std, sc.std, mstus.std, meta.data, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/reproducibility_input/duplicated_filtered_data.RData")
+```
+
+# Send workbook of retained features and bin numbers for manual comparison
+
+```{r}
+comp.report <- lapply(comp.std, function(x) rownames_to_column(x, var = "binName") )
+
+write.xlsx(comp.report, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/retained_bins.xlsx")
+
+```
+
+# Add retained bin to standard data for manual comparison and make workbook
+
+```{r}
+std.feats <- lab.rts
+
+for(lab in 1:length(std.feats)){
+  
+  std.feats[[lab]]$feat.bin <- NA
+  
+  std.feats[[lab]]$feat.mz <- NA
+  
+  std.feats[[lab]]$feat.rt <- NA
+  
+  std.feats[[lab]]$match.type <- NA
+  
+    for(metab in 1:nrow(std.feats[[lab]])){
+    
+      if(!(std.feats[[lab]]$InChiKey2D[metab] %in% comp.std[[lab]]$InChiKey2D)){next}   
+    
+    std.feats[[lab]]$feat.bin[metab] <- row.names(comp.std[[lab]])[which(comp.std[[lab]]$InChiKey2D == std.feats[[lab]]$InChiKey2D[metab])]
+    
+    std.feats[[lab]]$feat.mz[metab] <- comp.std[[lab]]$BinC12mz[which(comp.std[[lab]]$InChiKey2D == std.feats[[lab]]$InChiKey2D[metab])]
+    
+    std.feats[[lab]]$feat.rt[metab] <- comp.std[[lab]]$BinRT[which(comp.std[[lab]]$InChiKey2D == std.feats[[lab]]$InChiKey2D[metab])]
+    
+    std.feats[[lab]]$match.type[metab] <- comp.std[[lab]]$match.type[which(comp.std[[lab]]$InChiKey2D == std.feats[[lab]]$InChiKey2D[metab])]
+      
+    }
+}
+
+write.xlsx(std.feats, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/standards_and_retained_bins.xlsx")
+
+```
+
+
+

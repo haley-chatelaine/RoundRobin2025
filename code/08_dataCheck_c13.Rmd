@@ -1,0 +1,63 @@
+---
+title: "08_DataCheck_IS"
+author: "Haley"
+date: "2025-06-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is code to check the consistency of the IS samples (via the C13 raw values) across all samples and replicates
+
+# load functions
+
+```{r}
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/summary_functions.R")
+```
+
+# load data
+
+```{r}
+path <- "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/original_input"
+
+lab.names <- list.files(path = path, "Lab", full.names = T, recursive = F)
+
+c13.results <- read.results(path = path, file.text = "_Norm", sheet.text = "19-C13 Raw")
+
+# Map sample names
+
+master.map <- read.csv("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/original_input/sample_description_map.csv", header = T)
+
+c13.results <- map.samples(path, "_Norm", "1-Experimental Design", master.map, c13.results)
+```
+
+# Calculate CV of C13 values for all features in each lab
+*should be low
+
+```{r}
+calc.cv <- function(data){
+  
+  cvs <- apply(data, 2, function(x) sd(x) / mean(x))
+  
+  return(cvs)
+  
+}
+
+all.cvs <- lapply(c13.results, calc.cv)
+
+boxplot(all.cvs, main = "CV of C13 values")
+```
+
+# Are C13 values between pairs of duplicate samples highly correlated?
+
+```{r}
+c13.dupes <- cor.dupes(c13.results)
+c13.dupes.fix <- lapply(c13.dupes, function(x) x[,-1])
+
+boxplot(c13.dupes.fix)
+```
+# Lab 2 boxplot of C13 abundances by sample--which ones are funky? (all labs to see that other labs are even)
+
+

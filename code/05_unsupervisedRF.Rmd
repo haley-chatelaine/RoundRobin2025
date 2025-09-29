@@ -1,0 +1,107 @@
+---
+title: "20250717_Round Robin_RandomForest"
+author: "Haley"
+date: "2025-07-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code") 
+```
+
+# Unsupervised Random Forest clustering of Round Robin labs
+
+This file performs unsupervised RF clustering, based on sample groups, for each lab and creates plots of sample clusters
+
+## Load Functions and Data
+
+```{r}
+# Install/load randomForest package
+if(!require("randomForest")){
+  install.packages("randomForest")
+  library(randomForest())
+}
+
+if(!require("cluster")){
+  install.packages("cluster")
+  library(cluster)
+}
+
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/plotting_functions.R")
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/reproducibility_functions.R")
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/summary_functions.R")
+
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/clustering_input/duplicated_filtered_data.RData")
+```
+
+## Run Unsupervised RF on each lab
+
+```{r}
+norm.log <- lapply(norm.rt, log2)
+
+set.seed(333)
+rfs <- lapply(norm.log, function(x) randomForest(x = x, proximity = T, replace = F))
+
+```
+
+## Plot clusters for each lab using unsupervised random forest
+
+```{r}
+# set group colors
+group.colors <- c("red","orange","brown","purple","gold","darkgreen", "blue")
+names(group.colors) <- levels(meta.data$group)
+
+group.colors.df <- data.frame(group = names(group.colors), group.color = group.colors)
+
+# set concentration colors
+conc.colors <- brewer.pal(length(unique(meta.data$concentration)), "Blues")
+names(conc.colors) <- levels(meta.data$concentration)
+
+conc.colors.df <- data.frame(concentration = names(conc.colors), conc.color = conc.colors)
+
+# add colors to meta data
+meta.data.new <- merge(meta.data, group.colors.df, by = "group")
+meta.data.new <- merge(meta.data.new, conc.colors.df, by = "concentration")
+meta.data.new <- meta.data.new[order(meta.data.new$group),]
+row.names(meta.data.new) <- row.names(meta.data)
+
+# build distance metric
+dists <- lapply(rfs, function(x) dist(1 - x$proximity))
+
+# input for multidimensional scaling in 2D using mds
+mds <- lapply(dists, function(x) cmdscale(x, k = 2)) # try k-means to get cluster differences
+mds.group.colors <- lapply(mds, function(x) cbind(x, meta.data.new$group.color))
+
+# plot mds
+png("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/unsupervisedRF_clusters_WITHdupes.png", width = 8, height = 4, units = "in", res = 600)
+par(mfrow = c(2, 4), mgp = c(1.5,0.5,0), mar = c(3,3,2,2))
+mapply(function (x, y) plot(x, pch=16, xlab="Dim1", ylab="Dim2", col = meta.data.new$group.color, cex = 1, main=paste(y)), mds.group.colors, names(mds.group.colors))
+```
+
+# calculate strength of clustering using k-means cluster assignments and silhouette
+
+```{r}
+# check how k-means clustering performs on 2D mds data from all labs
+
+for(i in 1:length(mds)){
+  
+  k.means.i <- kmeans(mds[[i]], centers = length(unique(meta.data$group)))
+  
+  plot(mds.group.colors[[i]], pch=16, xlab="Dim1", ylab="Dim2", col = meta.data.new$group.color, cex = 2, main=paste(names(mds)[[i]]))
+points(k.means.i$centers[,1], k.means.i$centers[,2], pch = 19)
+  
+}
+
+# calculate silhouette scores based on a priori clusters (from meta-data) and plot
+
+
+for(i in 1:length(mds)){
+  
+  sil.i <- silhouette(as.numeric(meta.data$group), dist(mds[[i]]))
+  
+  print(fviz_silhouette(sil.i))
+  
+}
+
+```

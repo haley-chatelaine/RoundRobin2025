@@ -1,0 +1,464 @@
+---
+title: "20241101_RoundRobin_NMF"
+author: "Haley"
+date: "2024-11-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Run NMF on all filtered and prepared data sets (normalized and ratio) and extract:
+- heatmap of basis (sample classification)
+- clustering plot (?)
+
+# Load packages
+
+```{r}
+#install.packages("NMF")
+#install.packages("RColorBrewer")
+#install.packages("ggplotify")
+
+library(NMF)
+library(RColorBrewer)
+library(pheatmap)
+library(factoextra)
+library(ggplot2)
+library(ggpubr)
+library(grid)
+library(gridExtra)
+library(ggplotify)
+```
+
+# Load data
+
+```{r}
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/clustering_input/imputed_data.RData")
+
+#par(mfrow = c(2,4))
+lapply(norm.impute, function(x) plot(density(apply(x, 2, as.numeric)), main = ""))
+
+#par(mfrow = c(2, 4))
+lapply(norm.impute, function(x) boxplot((apply(x, 2, as.numeric)), main = ""))
+```
+
+# Run NMF, plot heatmaps, and calculate performance of clustering
+
+```{r}
+nmf_basis <- function(data, rank = 3, meta.data, meta.col = c("group", "concentration"), print.heatmap = TRUE, seed = NULL){
+  # data = list of data from all labs
+  # rank = rank for determining basis (3 for this study design because A, B, C groups)
+  # meta.data = meta data with sample info
+  # meta.col = column to use for coloring heatmap
+  # print.heat = logical saying whether to print out the heatmaps
+  
+  if(!is.null(seed)){
+    
+    set.seed(seed)
+    
+  }
+  
+  # subset data into labs and groups if plotting by sample concentration
+  
+  groups <- unique(meta.data$group)
+  
+      if(meta.col == "concentration"){
+        
+        data.new <- list()
+        length(data.new) <- length(data) * length(groups)
+        names(data.new) <- apply(expand.grid(names(data), groups), 1, paste, collapse="_")
+        
+        
+        for(i in 1:length(data.new)){
+          for(j in 1:length(data)){
+            
+            group.rows <- gsub("_.*", "", row.names(data[[j]]))
+            
+            for(k in 1:length(groups)){
+              
+              if(grepl(names(data)[[j]], names(data.new)[[i]]) == T &
+                 groups[k] == gsub(".*_", "", names(data.new)[[i]])){
+                
+                data.new[[i]] <- data[[j]][which(group.rows == groups[k]),]  
+                
+              }
+              
+            }
+          }
+        }
+          data <- data.new
+      }
+  
+  w <- list(length(data))
+  
+  if(print.heatmap == T){
+  
+    heats <- list(length(data))
+  
+      for(i in 1:length(data)){
+        
+        # calculate NMF
+        res <- nmf(data[[i]], rank)
+        
+        # extract basis
+        w[[i]] <- res@fit@W
+        
+        # plot heatmap of basis
+        
+          ## scale basis
+          scale.w <- w[[i]] / max(w[[i]])
+          colnames(scale.w) <- seq(1, ncol(scale.w), by = 1)
+        
+          ## set annotation row
+            if(meta.col == "group"){
+                rows <- data.frame("group" = gsub("_.*", "", row.names(scale.w)))
+            }
+            
+            if(meta.col == "concentration"){
+              conc <- gsub("_r.*", "", row.names(scale.w))
+              conc <- gsub("*._", "", conc)
+              rows <- data.frame("concentration" = conc)
+            }
+          
+            row.names(rows) <- row.names(scale.w)
+            
+          ## set annotation column
+          cols <- data.frame("basis" = seq(1, ncol(scale.w), by = 1))
+          row.names(cols) <- colnames(scale.w)
+          
+          ## set annotation colors
+            if(meta.col == "group"){
+              
+                group.colors <- c("red","orange","brown","purple","gold","darkgreen", "blue")
+                names(group.colors) <- levels(meta.data$group)
+          
+                basis.colors <- brewer.pal(n = ncol(scale.w), "Paired")
+                annotation_colors <- list(group = group.colors, basis = basis.colors)
+              
+            }
+          
+            if(meta.col == "concentration"){
+              
+                conc.colors <- brewer.pal(length(unique(conc)), "Blues")
+                names(conc.colors) <- unique(conc)
+     
+                basis.colors <- brewer.pal(n = ncol(scale.w), "Paired")
+                annotation_colors <- list(concentration = conc.colors, basis = basis.colors)
+                
+            }
+    
+          
+          ## plot
+            heats[[i]] <- as.ggplot(pheatmap(scale.w, 
+                                       color = colorRampPalette(brewer.pal(n = 9, name = "Oranges"))(100),
+                                       annotation_row = rows,
+                                       annotation_col = cols,
+                                       annotation_colors = annotation_colors,
+                                       annotation_legend = F,
+                                       main = names(data)[[i]]))
+          
+      }
+    
+    ggarrange(plotlist = heats, ncol = 4, nrow = 2, common.legend = T)
+  
+  }else{
+      
+    for(i in 1:length(data)){
+        
+        # calculate NMF
+        res <- nmf(data[[i]], rank)
+        
+        # extract basis
+        w[[i]] <- res@fit@W
+        
+      }
+    
+    }
+
+  # Calculate clustering performance
+  
+  cluster.cor <- data.frame(matrix(nrow = length(w), ncol = 1))
+  row.names(cluster.cor) <- names(data)
+  colnames(cluster.cor) <- "correlation"
+  
+  for(i in 1:length(w)){
+    
+    w.hcut <- hcut(w[[i]], 7)
+    sample.classes <- data.frame("cluster" = w.hcut$cluster, "group" = meta.data$group)
+
+    cluster.cor.test <- cor.test(as.numeric(as.factor(meta.data$group)), w.hcut$cluster, method = "pearson")
+    cluster.cor[i,c("correlation")] <- cluster.cor.test$estimate
+    
+  }
+  
+  names(w) <- names(data)
+  
+  return(list("w" = w, "correlation" = cluster.cor))
+  
+}
+
+w <- nmf_basis(norm.impute, 3, meta.data, "group", print.heatmap = T, seed = 3)
+
+nmf_basis(norm.impute, 3, meta.data, "group", print.heatmap = T, seed = 3)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_heatmap_WITH_dupes.png", width = 24, height = 16, dpi = 600)
+```
+
+# Validate that clusters are according to sample group
+
+```{r}
+nmf_cluster <- function(w, meta.data){
+  # w = basis from nmf_basis()
+  # meta.data = dataframe with sample groups
+  
+  # set group colors
+    group.colors <- c("red","orange","brown","purple","gold","darkgreen", "blue")
+    names(group.colors) <- levels(meta.data$group)
+    
+    group.colors.df <- data.frame(group = names(group.colors), group.color = group.colors)
+  
+  clusterplot <- list(length(w))
+      
+  for(i in 1:length(w)){
+    
+    w.hcut <- hcut(w[[i]], 7)
+    sample.classes <- data.frame("cluster" = w.hcut$cluster, "group" = meta.data$group)
+      
+    clusterplot[[i]] <- ggplot(sample.classes, aes(x = group, y = cluster, color = group)) +
+                            geom_point(position = position_jitter(w = 0.25, h = 0), size = 2) +
+                            scale_color_manual(values = group.colors) +
+                            theme_classic() +
+                            scale_y_continuous(breaks = seq(min(sample.classes$cluster), max(sample.classes$cluster), by = 1)) +
+                            ggtitle(names(w)[[i]]) +
+                            ylab("Basis Cluster") +
+                            xlab("Sample Group")
+    
+  }
+   
+  ggarrange(plotlist = clusterplot, ncol = 4, nrow = 2, common.legend = T)
+  
+  
+}
+
+nmf_cluster(w$w, meta.data)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_cluster_correlations_WITH_dupes.png", width = 12, height = 8, dpi = 600)
+
+```
+
+# Determine important features
+
+```{r}
+# Function to extract features and relative contribution to each rank (as a fraction), and assign labels to ranks
+
+nmf_feats <- function(data, rank = 3, meta.data, meta.col = c("group", "concentration")){
+  # data = list of data from all labs
+  # rank = rank for determining basis (3 for this study design because A, B, C groups)
+  # meta.data = meta data with sample info
+  # meta.col = column to use for coloring heatmap
+  
+  set.seed(3)
+ 
+  # subset data into labs and groups if plotting by sample concentration
+  
+    groups <- unique(meta.data$group)
+    
+        if(meta.col == "concentration"){
+          
+          data.new <- list()
+          length(data.new) <- length(data) * length(groups)
+          names(data.new) <- apply(expand.grid(names(data), groups), 1, paste, collapse="_")
+          
+          
+          for(i in 1:length(data.new)){
+            for(j in 1:length(data)){
+              
+              group.rows <- gsub("_.*", "", row.names(data[[j]]))
+              
+              for(k in 1:length(groups)){
+                
+                if(grepl(names(data)[[j]], names(data.new)[[i]]) == T &
+                   groups[k] == gsub(".*_", "", names(data.new)[[i]])){
+                  
+                  data.new[[i]] <- data[[j]][which(group.rows == groups[k]),]  
+                  
+                }
+                
+              }
+            }
+          }
+            data <- data.new
+        }
+  
+  # extract coefficients and basis
+  
+    h <- list(length(data))
+    w <- list(length(data))
+   
+    for(i in 1:length(data)){
+      
+     # calculate NMF
+      res <- nmf(data[[i]], rank)
+          
+      # extract coefficients
+      h[[i]] <- res@fit@H
+      
+      # extract basis
+      w[[i]] <- res@fit@W
+      
+    }
+      
+    names(h) <- names(data)
+    names(w) <- names(data)
+  
+  # determine labels for ranks
+    rank.labels <- list(length(w))
+    
+    for(i in 1:length(w)){
+      
+     ## subset data to only include a, b, and c groups and calculate sums across ranks for each group
+      groups <- gsub("_.*", "", row.names(w[[i]])) 
+      
+      a.sum <- colSums(w[[i]][which(groups == "a"),])
+      b.sum <- colSums(w[[i]][which(groups == "b"),])
+      c.sum <- colSums(w[[i]][which(groups == "c"),])
+      
+      # assign labels to the ranks
+      a.rank <- which(a.sum == max(a.sum))
+      b.rank <- which(b.sum == max(b.sum))
+      c.rank <- which(c.sum == max(c.sum))
+      
+      rank.labels[[i]] <- c("a" = a.rank, "b" = b.rank, "c" = c.rank)
+      
+    }    
+    
+  # convert coefficients to percent contribution across ranks
+    
+    h.perc <- h
+    
+    for(i in 1:length(h.perc)){
+      
+      h.totals <- colSums(h.perc[[i]])
+      
+      h.perc[[i]] <- sweep(h.perc[[i]], 2, h.totals, FUN = "/")
+      
+      rows <- names(rank.labels[[i]][order(rank.labels[[i]])])
+      
+      row.names(h.perc[[i]]) <- rows
+      
+    }
+  
+    names(h.perc) <- names(h)
+    
+    return(h.perc)
+    
+}
+
+h <- nmf_feats(norm.impute, rank = 3, meta.data, meta.col = "group")
+
+```
+
+## save list of features for biomarker filtering
+
+```{r}
+save(h, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_features_WITH_dupes.RData")
+```
+
+# Run model X times to validate
+
+```{r}
+# set number of iterations
+x <- 100
+
+# prep results
+iteration.cor <- data.frame(matrix(nrow = length(norm.impute), ncol = x))
+row.names(iteration.cor) <- names(norm.impute)
+colnames(iteration.cor) <- paste0("model_", seq(1:x))
+
+# run iterations
+for(i in 1:x){
+  
+print(i)
+  
+ model <- nmf_basis(norm.impute, rank = 3, meta.data, "group", print.heatmap = F) 
+  
+ iteration.cor[,i] <- model$correlation
+ 
+}
+
+# calculate average correlation across all iterations
+
+iteration.cor$std.dev <- apply(iteration.cor,1, sd)
+
+iteration.cor$average <- rowMeans(iteration.cor)
+
+iteration.cor$average
+iteration.cor$std.dev
+
+```
+
+```{r}
+data.8 <- norm.impute$Lab8
+
+# Based on features that contribute a lot to each rank
+all.means <- colMeans(data.8)
+
+mean.8 <- c()
+
+for(i in 1:ncol(data.8)){
+  
+  if(colnames(data.8)[i] %in% high.8){
+    mean.8[i] <- colMeans(data.8)[i]
+  }else{next}
+  
+}
+
+mean.8 <- mean.8[which(colnames(data.8) %in% high.8)]
+
+boxplot(all.means)
+boxplot(mean.8)
+
+# boxplots based on features with high coefficients
+
+par(mfrow = c(2, 4))
+for(i in 1:length(norm.impute)){
+  
+  res <- nmf(log2(norm.impute[[i]]), rank = 3)
+  h.i <- res@fit@H
+  h.i.means <- colMeans(h.i)
+  max.h.i <- log2(norm.impute[[i]])[,which(h.i.means > quantile(h.i.means, 0.75))]
+  
+  boxplot(max.h.i)
+  
+}
+
+par(mfrow = c(2,4))
+lapply(norm.impute, boxplot)
+
+# abundance relationship with coefficients
+
+set.seed(3)
+par(mfrow = c(2, 4))
+for(i in 1:length(norm.impute)){
+  
+  res <- nmf(log2(norm.impute[[i]]), rank = 3)
+  h.i <- res@fit@H
+  h.i.means <- colMeans(h.i)
+  data.i.means <- colMeans(log2(norm.impute[[i]]))
+  
+  plot(data.i.means ~ h.i.means)
+  
+}
+
+set.seed(3)
+par(mfrow = c(2, 4))
+for(i in 1:length(norm.impute)){
+  
+  res <- nmf(norm.impute[[i]], rank = 3)
+  h.i <- res@fit@H
+  h.i.means <- colMeans(h.i)
+  data.i.means <- colMeans(norm.impute[[i]])
+  
+  plot(data.i.means ~ h.i.means)
+  
+}
+```

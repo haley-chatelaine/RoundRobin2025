@@ -1,0 +1,439 @@
+---
+title: "20250124_RoundRobin_BiomarkerFiltering"
+author: "Haley"
+date: "2025-01-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load data
+
+```{r}
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/ANOVA_features_WITH_duplicates.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/PCA_features_WITHduplicates.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_features_WITH_dupes.RData")
+```
+
+# Load packages
+
+```{r}
+packages <- c("tidyverse", "dplyr", "ggplot2", "ggpattern", "plotly", 
+              "RColorBrewer", "ggsci", "ggpubr", "pheatmap", "grafify", 
+              "openxlsx", "data.table", "grafify", "factoextra", "htmltools", "colorspace")
+
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+
+invisible(lapply(packages, library, character.only = TRUE))
+```
+
+# ANOVA features filter
+features with top 10% of lowest adjusted p-values
+
+```{r}
+anova.feats <- list(length(anova.results))
+
+anova.feats <- lapply(anova.results, function(x) which(x < 0.05))
+
+anova.feats <- lapply(anova.feats, function(x) names(x))
+```
+
+# PCA features filter
+top 10% absolute value loadings from each PC (take unique across all 3 PCs)
+
+```{r}
+pca.feats <- lapply(norm.group.load, abs)
+
+pca.filter <- function(lab.feats, cutoff){
+  # lab.feats = pca features from one lab
+  # cutoff = percentile cutoff
+  
+  results <- apply(lab.feats, 2, function(x) which(x > quantile(x, cutoff)))
+  
+  results <- apply(results, 2, function(x) row.names(lab.feats)[x])
+  
+  return(results)
+
+}
+
+pca.feats <- lapply(pca.feats, function(x) pca.filter(x, 0.9))
+
+pca.feats <- lapply(pca.feats, function(x) unique(c(x[,1], x[,2], x[,3])) )
+```
+
+# NMF feature filter
+features that contribute at least two-thirds to a given rank
+
+```{r}
+nmf_feat_imp <- function(h, imp.cutoff = 0.67){
+  # h = matrix of feature coefficients expressed as a fraction of total contribution to each rank
+  # imp.cutoff = value for feature importance within each rank
+  
+  # determine features with percent coefficient values above cutoff for each rank
+    h.feats <- list(length(h))
+    
+    for(i in 1:length(h)){
+      
+      a.feats <- colnames(h[[i]])[which(h[[i]][c("a"),] > imp.cutoff)]
+      b.feats <- colnames(h[[i]])[which(h[[i]][c("b"),] > imp.cutoff)]
+      c.feats <- colnames(h[[i]])[which(h[[i]][c("c"),] > imp.cutoff)]
+      
+      h.feats[[i]] <- list("a" = a.feats, "b" = b.feats, "c" = c.feats)
+      
+    }
+    
+    names(h.feats) <- names(h)
+  
+  return(h.feats)
+  
+}
+
+nmf.feats <- nmf_feat_imp(h, 0.67)
+
+```
+
+# Table of features and importance
+
+```{r}
+all.feats <- c(unlist(anova.feats), unlist(pca.feats), unlist(nmf.feats)) 
+all.feats <- gsub("_.*", "", all.feats)
+
+results <- list()
+
+for(i in 1:8){ # for all labs
+  print(i)
+  
+  results[[i]] <- data.frame(matrix(ncol = 6))
+  colnames(results[[i]]) <- c("Name", "lab", "MF", "ANOVA", "PCA", "NMF")
+  
+  for(j in 1:length(all.feats)){ # for all features that are significant anywhere
+    #print(j)
+    
+    # if in all
+    
+    if(all.feats[j] %in% anova.feats[[i]] &
+       all.feats[j] %in% pca.feats[[i]] &
+       all.feats[j] %in% unlist(nmf.feats[[i]])){
+      
+      results[[i]] <- rbind(results[[i]], c("Name" = all.feats[j], 
+                                            "lab" = names(anova.feats)[[i]],
+                                            "MF" = unique(comp.found.na.filter[[i]]$MF[
+                                              which(comp.found.na.filter[[i]]$Name == all.feats[j])]),
+                                            "ANOVA" = 1, 
+                                            "PCA" = 1, 
+                                            "NMF" = 1))
+    }
+    
+    # if in ANOVA and PCA
+    
+    else if(all.feats[j] %in% anova.feats[[i]] &
+       all.feats[j] %in% pca.feats[[i]] &
+       all.feats[j] %in% unlist(nmf.feats[[i]]) == F){
+      
+      results[[i]] <- rbind(results[[i]], c("Name" = all.feats[j], 
+                                            "lab" = names(anova.feats)[[i]],
+                                            "MF" = unique(comp.found.na.filter[[i]]$MF[
+                                              which(comp.found.na.filter[[i]]$Name == all.feats[j])]),
+                                            "ANOVA" = 1, 
+                                            "PCA" = 1, 
+                                            "NMF" = 0))
+        }    
+    
+    # if in ANOVA and NMF
+    
+    else if(all.feats[j] %in% anova.feats[[i]] &
+       all.feats[j] %in% pca.feats[[i]] == F &
+       all.feats[j] %in% unlist(nmf.feats[[i]])){
+      
+      results[[i]] <- rbind(results[[i]], c("Name" = all.feats[j], 
+                                            "lab" = names(anova.feats)[[i]],
+                                            "MF" = unique(comp.found.na.filter[[i]]$MF[
+                                              which(comp.found.na.filter[[i]]$Name == all.feats[j])]),
+                                            "ANOVA" = 1, 
+                                            "PCA" = 0, 
+                                            "NMF" = 1))
+        }      
+ 
+    # if in PCA and NMF
+    
+    else if(all.feats[j] %in% anova.feats[[i]] == F &
+       all.feats[j] %in% pca.feats[[i]] &
+       all.feats[j] %in% unlist(nmf.feats[[i]])){
+      
+      results[[i]] <- rbind(results[[i]], c("Name" = all.feats[j], 
+                                            "lab" = names(anova.feats)[[i]],
+                                            "MF" = unique(comp.found.na.filter[[i]]$MF[
+                                              which(comp.found.na.filter[[i]]$Name == all.feats[j])]),
+                                            "ANOVA" = 0, 
+                                            "PCA" = 1, 
+                                            "NMF" = 1))
+        }        
+  
+    # if in only ANOVA
+    
+    else if(all.feats[j] %in% anova.feats[[i]] &
+       all.feats[j] %in% pca.feats[[i]] == F &
+       all.feats[j] %in% unlist(nmf.feats[[i]]) == F){
+      
+      results[[i]] <- rbind(results[[i]], c("Name" = all.feats[j], 
+                                            "lab" = names(anova.feats)[[i]],
+                                            "MF" = unique(comp.found.na.filter[[i]]$MF[
+                                              which(comp.found.na.filter[[i]]$Name == all.feats[j])]),
+                                            "ANOVA" = 1, 
+                                            "PCA" = 0, 
+                                            "NMF" = 0))
+        }     
+     
+    # if in only PCA
+    
+    else if(all.feats[j] %in% anova.feats[[i]] == F &
+       all.feats[j] %in% pca.feats[[i]] &
+       all.feats[j] %in% unlist(nmf.feats[[i]]) == F){
+      
+      results[[i]] <- rbind(results[[i]], c("Name" = all.feats[j], 
+                                            "lab" = names(anova.feats)[[i]],
+                                            "MF" = unique(comp.found.na.filter[[i]]$MF[
+                                              which(comp.found.na.filter[[i]]$Name == all.feats[j])]),
+                                            "ANOVA" = 0, 
+                                            "PCA" = 1, 
+                                            "NMF" = 0))
+    } 
+    
+    # if in only NMF
+    
+    else if(all.feats[j] %in% anova.feats[[i]] == F &
+       all.feats[j] %in% pca.feats[[i]] == F &
+       all.feats[j] %in% unlist(nmf.feats[[i]])){
+      
+      results[[i]] <- rbind(results[[i]], c("Name" = all.feats[j], 
+                                            "lab" = names(anova.feats)[[i]],
+                                            "MF" = unique(comp.found.na.filter[[i]]$MF[
+                                              which(comp.found.na.filter[[i]]$Name == all.feats[j])]),
+                                            "ANOVA" = 0, 
+                                            "PCA" = 0, 
+                                            "NMF" = 1))
+        }        
+  }
+  
+  results[[i]] <- results[[i]][-which(rowSums(is.na(results[[i]])) == ncol(results[[i]])),]
+}
+
+results.df <- data.frame()
+
+for(k in 1:length(results)){
+  
+  results.df <- rbind(results.df, results[[k]])
+  
+}
+
+# add number of analyses where the metabolite was important
+
+sig.numbers <- apply(subset(results.df, select = c("ANOVA", "PCA", "NMF")), 2, as.numeric)
+results.df$total.sig <- apply(sig.numbers, 1, sum)
+
+# add number of labs where the MF was important in at least one analysis
+mf <- unique(results.df$MF)
+
+results.df$total.lab <- NA
+
+for(i in 1:length(mf)){
+  
+  subset.data <- results.df[which(results.df$MF == mf[i]),]
+  
+  n.labs <- length(unique(subset.data$lab))
+ 
+  for(j in 1:nrow(results.df)){
+    
+    if(results.df$MF[j] == mf[i]){
+      
+      results.df$total.lab[j] <- n.labs
+      
+    }
+    
+  }
+   
+}
+
+
+write.csv(results.df, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/important_features_WITH_duplicates.csv", row.names = F)
+```
+
+## How many metabolites were significant in at least one analysis in X labs?
+
+```{r}
+n.sig.labs <- data.frame(matrix(nrow = length(unique(results.df$total.lab)), ncol = 3))
+colnames(n.sig.labs) <- c("Number of Labs", "Number of Metabs")
+
+for(i in 1:nrow(n.sig.labs)){
+  
+  n.sig.labs$`Number of Labs`[i] <- paste0("Significant in ", i, " labs")
+  
+  n.sig.labs$`Number of Metabs`[i] <- length(unique(results.df$MF[which(results.df$total.lab == i)]))
+  
+}
+
+n.sig.analyses <- data.frame(matrix(nrow = length(unique(results.df$total.sig)), ncol = 3))
+colnames(n.sig.analyses) <- c("Number of analyses", "Number of Metabs")
+
+for(i in 1:nrow(n.sig.analyses)){
+  
+  n.sig.analyses$`Number of analyses`[i] <- paste0("Significant in ", i, " analyses")
+  
+  n.sig.analyses$`Number of Metabs`[i] <- length(unique(results.df$MF[which(results.df$total.sig == i)]))
+  
+}
+
+```
+
+# Boxplots of features significant in at least 1 analysis in all 8 labs
+
+```{r}
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+
+metabs.8 <- unique(results.df$MF[which(results.df$total.lab == 8)])
+
+metab.boxplot <- function(norm.impute, metab){
+  # norm.impute = input data for boxplots
+  # metab = index of metabolite to plot from list (like metabs.8)
+  
+png(paste0("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/biomarker_boxplots_", metab, ".png"), width = 1600, height = 400)
+par(mfrow = c(1, 8))
+  
+  for(lab in 1:length(norm.impute)){
+    
+    # Extract abundance data
+    metab.data <- norm.impute[[lab]][which(comp.found.na.filter[[lab]]$MF == metab)]
+  
+    # Average data if multiple features for the MF
+    metab.avg <- rowMeans(metab.data, na.rm = T)
+    
+    # Report number of features averaged
+    n.feats <- ncol(metab.data)
+    
+    # Prepare for boxplots
+    box.data <- data.frame("avg.abund" = metab.avg, "sample.group" = gsub("_.*", "", row.names(metab.data)))
+    box.data$sample.group <- factor(box.data$sample.group, levels = c("a", "b", "c", "ab", "ac", "bc", "abc"))
+    box.data <- box.data[order(box.data$sample.group),]
+  
+    # Make boxplots
+    ## set group colors with gradients within groups
+      group.colors <- c("red","gold","blue","orange","purple","darkgreen","brown")
+      names(group.colors) <- levels(box.data$sample.group)
+
+      
+      boxplot(box.data$avg.abund ~ box.data$sample.group, 
+            col = group.colors,
+            main = paste(names(norm.impute)[[lab]], "-", metab, "-", n.feats, "features"),
+            xlab = "",
+            ylab = "",
+            xaxt = "n",
+            yaxt = "n",
+            cex.axis = 0.8)
+    axis(1, at = 1:7, label = c("a", "b", "c", "ab", "ac", "bc", "abc"), tck = -0.05)
+    axis(2, at = 1:5, label = seq(min(box.data$avg.abund), max(box.data$avg.abund), length.out = 5))
+    
+  }
+      dev.off()
+}
+
+lapply(metabs.8, function(x) metab.boxplot(norm.impute, x))
+
+
+
+```
+
+# Heatmap of figures significant in at least 1 analysis in all 8 labs
+
+```{r}
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+
+metabs.8 <- unique(results.df$MF[which(results.df$total.lab == 8)])
+
+# Subset and prep abundance data
+
+subset.metabs <- function(data.list, metab.list, lab, comp.meta, scale.metabs = F){
+  
+  lab.comp <- comp.meta[[lab]]
+  lab.data <- data.list[[lab]]
+  colnames(lab.data) <- row.names(lab.comp)
+  
+  subset.data <- lab.data[,which(lab.comp$MF %in% metab.list)]
+  
+  if(scale.metabs == T){
+    
+   subset.data <- scale(subset.data, scale = T)
+     
+  }
+  
+  subset.comp <- subset(lab.comp[which(lab.comp$MF %in% metab.list),],
+                        select = c(Name, MF))
+  
+  return(list(data = subset.data, meta = subset.comp))
+  
+}
+
+lab.subset.data <- lapply(c("Lab1", "Lab2", "Lab3", "Lab4", "Lab5", "Lab6", "Lab7", "Lab8"), 
+                          function(x) subset.metabs(norm.impute, metabs.8, x, comp.found.na.filter, scale.metabs = T))
+names(lab.subset.data) <- names(norm.impute)
+
+# heatmap function
+
+subset.heatmap <- function(lab.subset.data, lab, meta.data){
+  
+  heat.data <- lab.subset.data[[lab]]
+  heat.data$meta <- heat.data$meta[order(heat.data$meta$MF),]
+  heat.data$data <- heat.data$data[,order(heat.data$meta$MF)]
+  
+  annotations <- data.frame(MF = heat.data$meta$MF)
+  rownames(annotations) <- colnames(heat.data$data)
+  
+  ann_colors <- list(MF = c(C11H12N2O2 = "#FF8080",
+                            C11H20N2O3 = "#FFC266", 
+                            C16H29N3O4 = "#9999ff", 
+                            C4H7NO4 = "#79d279", 
+                            C8H16N2O3 = "#d9b3ff", 
+                            C8H20NO6P = "#dfbf9f",
+                            C10H18N2O5 = "#c5c4c2"),
+                     group = c(a = "red",
+                               ab = "orange", 
+                               abc = "brown", 
+                               ac = "purple", 
+                               b = "gold", 
+                               bc = "forestgreen", 
+                               c = "blue"))
+  
+  meta.data$group <- factor(meta.data$group, levels = c("a", "b", "c", "ab", "ac", "bc", "abc"))
+  heat.data$data <- heat.data$data[order(meta.data$group),]
+  meta.data <- meta.data[order(meta.data$group),]
+  
+  heat <- as.ggplot(pheatmap(t(heat.data$data),
+                     show_colnames = F,
+                     show_rownames = F,
+                     cluster_rows = F,
+                     cluster_cols = F,
+                     annotation_row = annotations,
+                     annotation_col = subset(meta.data, select = c(group)),
+                     annotation_colors = ann_colors,
+                     main = lab,
+                     legend = F,
+                     annotation_legend = F,
+                     fontsize = 5))  
+  
+  return(heat)
+  }
+
+# heatmap
+
+heatmaps <- lapply(c("Lab1", "Lab2", "Lab3", "Lab4", "Lab5", "Lab6", "Lab7", "Lab8"), 
+                    function(x) subset.heatmap(lab.subset.data, x, meta.data))
+heat.arrange <- ggarrange(plotlist = heatmaps, nrow = 2, ncol = 4, common.legend = T)
+
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/biomarker_heatmap.png", heat.arrange, width = 6, height = 4, dpi = 300, units = "in")
+```
+
+
