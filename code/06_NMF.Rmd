@@ -1,3 +1,11 @@
+---
+title: "06_NMF"
+author: "Haley"
+date: "2023-12-14"
+output: html_document
+---
+
+
 # Load packages
 
 ```{r}
@@ -19,7 +27,7 @@ library(ggplotify)
 # Load data
 
 ```{r}
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+load("./data/duplicate_input/imputed_data.RData")
 
 #par(mfrow = c(2,4))
 lapply(norm.impute, function(x) plot(density(apply(x, 2, as.numeric)), main = ""))
@@ -186,7 +194,7 @@ nmf_basis <- function(data, rank = 3, meta.data, meta.col = c("group", "concentr
 w <- nmf_basis(norm.impute, 3, meta.data, "group", print.heatmap = T, seed = 3)
 
 nmf_basis(norm.impute, 3, meta.data, "group", print.heatmap = T, seed = 3)
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_heatmap_WITH_dupes.png", width = 24, height = 16, dpi = 600)
+ggsave("./outputs/NMF_heatmap_WITH_dupes.png", width = 24, height = 16, dpi = 600)
 ```
 
 # Validate that clusters are according to sample group
@@ -226,7 +234,7 @@ nmf_cluster <- function(w, meta.data){
 }
 
 nmf_cluster(w$w, meta.data)
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_cluster_correlations_WITH_dupes.png", width = 12, height = 8, dpi = 600)
+ggsave("./outputs/NMF_cluster_correlations_WITH_dupes.png", width = 12, height = 8, dpi = 600)
 
 ```
 
@@ -352,7 +360,7 @@ h <- nmf_feats(norm.impute, rank = 3, meta.data, meta.col = "group", comp.found.
 ## save list of features for biomarker filtering
 
 ```{r}
-save(h, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_features_WITH_dupes.RData")
+save(h, comp.found.na.filter, file = "./data/biomarker_input/NMF_features_WITH_dupes.RData")
 ```
 
 # Run model X times to validate
