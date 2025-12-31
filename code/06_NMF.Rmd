@@ -1,18 +1,3 @@
----
-title: "20241101_RoundRobin_NMF"
-author: "Haley"
-date: "2024-11-01"
-output: html_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-Run NMF on all filtered and prepared data sets (normalized and ratio) and extract:
-- heatmap of basis (sample classification)
-- clustering plot (?)
-
 # Load packages
 
 ```{r}
@@ -34,7 +19,7 @@ library(ggplotify)
 # Load data
 
 ```{r}
-load("./data/duplicate_input/imputed_data.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
 
 #par(mfrow = c(2,4))
 lapply(norm.impute, function(x) plot(density(apply(x, 2, as.numeric)), main = ""))
@@ -201,7 +186,7 @@ nmf_basis <- function(data, rank = 3, meta.data, meta.col = c("group", "concentr
 w <- nmf_basis(norm.impute, 3, meta.data, "group", print.heatmap = T, seed = 3)
 
 nmf_basis(norm.impute, 3, meta.data, "group", print.heatmap = T, seed = 3)
-ggsave("./outputs/NMF_heatmap_WITH_dupes.png", width = 24, height = 16, dpi = 600)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_heatmap_WITH_dupes.png", width = 24, height = 16, dpi = 600)
 ```
 
 # Validate that clusters are according to sample group
@@ -241,7 +226,7 @@ nmf_cluster <- function(w, meta.data){
 }
 
 nmf_cluster(w$w, meta.data)
-ggsave("./outputs/NMF_cluster_correlations_WITH_dupes.png", width = 12, height = 8, dpi = 600)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_cluster_correlations_WITH_dupes.png", width = 12, height = 8, dpi = 600)
 
 ```
 
@@ -250,11 +235,12 @@ ggsave("./outputs/NMF_cluster_correlations_WITH_dupes.png", width = 12, height =
 ```{r}
 # Function to extract features and relative contribution to each rank (as a fraction), and assign labels to ranks
 
-nmf_feats <- function(data, rank = 3, meta.data, meta.col = c("group", "concentration")){
+nmf_feats <- function(data, rank = 3, meta.data, meta.col = c("group", "concentration"), comp.data){
   # data = list of data from all labs
   # rank = rank for determining basis (3 for this study design because A, B, C groups)
   # meta.data = meta data with sample info
   # meta.col = column to use for coloring heatmap
+  # comp.data = list of metabolite meta-data from all labs
   
   set.seed(3)
  
@@ -331,7 +317,7 @@ nmf_feats <- function(data, rank = 3, meta.data, meta.col = c("group", "concentr
       
     }    
     
-  # convert coefficients to percent contribution across ranks
+  # convert coefficients to percent contribution across ranks and add bin names to results
     
     h.perc <- h
     
@@ -341,9 +327,15 @@ nmf_feats <- function(data, rank = 3, meta.data, meta.col = c("group", "concentr
       
       h.perc[[i]] <- sweep(h.perc[[i]], 2, h.totals, FUN = "/")
       
+      # rank names
+      
       rows <- names(rank.labels[[i]][order(rank.labels[[i]])])
       
       row.names(h.perc[[i]]) <- rows
+      
+      # feature bins
+      
+      colnames(h.perc[[i]]) <- row.names(comp.data[[i]])
       
     }
   
@@ -353,14 +345,14 @@ nmf_feats <- function(data, rank = 3, meta.data, meta.col = c("group", "concentr
     
 }
 
-h <- nmf_feats(norm.impute, rank = 3, meta.data, meta.col = "group")
+h <- nmf_feats(norm.impute, rank = 3, meta.data, meta.col = "group", comp.found.na.filter)
 
 ```
 
 ## save list of features for biomarker filtering
 
 ```{r}
-save(h, comp.found.na.filter, file = "./data/biomarker_input/NMF_features_WITH_dupes.RData")
+save(h, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_features_WITH_dupes.RData")
 ```
 
 # Run model X times to validate
@@ -389,7 +381,7 @@ print(i)
 
 iteration.cor$std.dev <- apply(iteration.cor,1, sd)
 
-iteration.cor$average <- rowMeans(iteration.cor)
+iteration.cor$average <- rowMeans(subset(iteration.cor, select = -c(std.dev)))
 
 iteration.cor$average
 iteration.cor$std.dev

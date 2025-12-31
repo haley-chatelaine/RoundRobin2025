@@ -1,0 +1,2 @@
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+head(norm.impute$Lab1)

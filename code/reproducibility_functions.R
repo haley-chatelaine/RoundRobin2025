@@ -407,11 +407,16 @@ lab.cor <- function(results.list, cortype){
 
 # 7. Correlation visualization
 
-heat.cor <- function(labcor.results, comp.class = NULL, order.by.class = FALSE, show.rownames = FALSE){
+heat.cor <- function(labcor.results, comp.class = NULL, order.by.class = FALSE, 
+                     show.colnames = FALSE, show.rownames = TRUE, legend = TRUE,
+                     show.negatives = TRUE){
   # labcor.results = results from finding pairwise correlations of features between labs
   # comp.class = metabolite metadata with chemical classes mapped
   # order.by.class = logical stating whether to use chemical class to order the rows (as opposed to hierarchical clustering)
+  # show.colnames = logical saying whether to include column names in the heatmap
   # show.rownames = logical saying whether to include row names in the heatmap
+  # legend = logical saying whether to include legend in the heatmap
+  # show.negatives = sets color gradient to include consideration of negative correlations when TRUE, only gradients for positive when FALSE
   
   plot.data <- labcor.results
   
@@ -421,7 +426,20 @@ heat.cor <- function(labcor.results, comp.class = NULL, order.by.class = FALSE, 
   
   # prepare colors for gradient
   
-      cols <- colorRampPalette(c("darkred", "white", "darkblue"))(100)
+  if(show.negatives == TRUE){
+    
+     cols <- colorRampPalette(c("darkred", "white", "darkblue"))(100)  
+     
+     breaks.seq <- seq(-1, 1, length.out = 101)
+     
+  }else{
+    
+    cols <- colorRampPalette(c("white", "darkblue"))(100)
+
+    breaks.seq <- seq(0, 1, length.out = 101)
+    
+  }
+
       
   # add row annotations based on comp.class, if provided
   
@@ -475,25 +493,32 @@ heat.cor <- function(labcor.results, comp.class = NULL, order.by.class = FALSE, 
       print("row annotations and metabolite names don't match")
     }else{
      
-      hmap <- pheatmap(fin.data[order(row.annot$class),], 
-                       color = cols,
-                       breaks = seq(-1, 1, length.out = 101),
-                       cluster_rows = F,
-                       cluster_cols = F,
-                       show_rownames = show.rownames,
-                       annotation_row = row.annot)
+      hmap <- as.ggplot(pheatmap(t(fin.data[order(row.annot$class),]), 
+                           color = cols,
+                           breaks = breaks.seq,
+                           cluster_rows = F,
+                           cluster_cols = F,
+                           show_colnames = show.colnames,
+                           show_rownames = show.rownames,
+                           annotation_row = row.annot,
+                           legend = legend,
+                           fontsize = 15
+                           ))
        
     }
     
   }else{
     
-    hmap <- pheatmap(fin.data, 
-                     color = cols,
-                     breaks = seq(-1, 1, length.out = 101),
-                     cluster_rows = F,
-                     cluster_cols = F,
-                     show_rownames = show.rownames)
-    
+    hmap <- as.ggplot(pheatmap(t(fin.data), 
+                         color = cols,
+                         breaks = breaks.seq,
+                         cluster_rows = F,
+                         cluster_cols = F,
+                         show_colnames = show.colnames,
+                         show_rownames = show.rownames,
+                         legend = legend,
+                         fontsize = 15))
+        
   }    
       
   return(hmap)

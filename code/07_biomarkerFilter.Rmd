@@ -12,16 +12,16 @@ knitr::opts_chunk$set(echo = TRUE)
 # Load data
 
 ```{r}
-load("./data/biomarker_input/ANOVA_features_WITH_duplicates.RData")
-load("./data/biomarker_input/PCA_features_WITHduplicates.RData")
-load("./data/biomarker_input/NMF_features_WITH_dupes.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/ANOVA_features_WITH_duplicates.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/PCA_features_WITHduplicates.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_features_WITH_dupes.RData")
 ```
 
 # Load packages
 
 ```{r}
 packages <- c("tidyverse", "dplyr", "ggplot2", "ggpattern", "plotly", 
-              "RColorBrewer", "ggsci", "ggpubr", "pheatmap", "grafify", 
+              "RColorBrewer", "ggsci", "ggpubr", "pheatmap", "grafify", "patchwork",
               "openxlsx", "data.table", "grafify", "factoextra", "htmltools", "colorspace")
 
 installed_packages <- packages %in% rownames(installed.packages())
@@ -30,6 +30,9 @@ if (any(installed_packages == FALSE)) {
 }
 
 invisible(lapply(packages, library, character.only = TRUE))
+
+BiocManager::install("ComplexHeatmap")
+library(ComplexHeatmap)
 ```
 
 # ANOVA features filter
@@ -38,9 +41,9 @@ features with adjusted p-values < 0.05
 ```{r}
 anova.feats <- list(length(anova.results))
 
-anova.feats <- lapply(anova.results, function(x) which(x < 0.05))
+anova.feats <- lapply(anova.results, function(x) which(x$`adj.p` < 0.05))
 
-anova.feats <- lapply(anova.feats, function(x) names(x))
+anova.feats <- mapply(function(x, y) x$feature[y], anova.results, anova.feats)
 ```
 
 # PCA features filter
@@ -65,6 +68,44 @@ pca.feats <- lapply(pca.feats, function(x) pca.filter(x, 0.9))
 
 pca.feats <- lapply(pca.feats, function(x) unique(c(x[,1], x[,2], x[,3])) )
 ```
+
+Find the quantiles for GPC
+
+```{r}
+gpc <- list("Lab1" = c("LTRS_000076_SECIM-RP-Pos"),
+            "Lab2" = c("LTRS_000149_BasePos", "LTRS_000044_BaseNeg"),
+            "Lab3" = c("LTRS_000112_MDARP-pos", "LTRS_000131_MDARP-pos"),
+            "Lab4" = c("LTRS_000040_BarnesPos"),
+            "Lab5" = c("LTRS_000041_BasePos", "LTRS_000076_BasePos"),
+            "Lab6" = c("LTRS_000060_BasePos"),
+            "Lab7" = c("LTRS_000106_BasePos", "LTRS_000114_BasePos"),
+            "Lab8" = c("LTRS_000143_BasePos", "LTRS_000128_BasePos"))
+
+pca.test <- lapply(norm.group.load, abs)
+
+for(lab in 1:length(pca.test)){
+  for(pc in 1:ncol(pca.test[[lab]])){
+  
+  if(length(gpc[[lab]]) == 1){
+    
+   pc_ecdf <- ecdf(pca.test[[lab]][,pc]) 
+   
+   print(paste("Qunatile of", gpc[[lab]], "in lab", lab, "in PC", pc, "=", pc_ecdf(pca.test[[lab]][which(row.names(pca.test[[lab]]) == gpc[[lab]]), pc])))
+   
+  } else {
+  
+    for(feat in 1:length(gpc[[lab]])){
+      
+   pc_ecdf <- ecdf(pca.test[[lab]][,pc]) 
+   
+   print(paste("Qunatile of", gpc[[lab]][feat], "in lab", lab, "in PC", pc, "=", pc_ecdf(pca.test[[lab]][which(row.names(pca.test[[lab]]) == gpc[[lab]][feat]), pc])))      
+      
+      }
+    }
+  }
+}
+```
+
 
 # NMF feature filter
 features that contribute at least two-thirds to a given rank
@@ -101,15 +142,14 @@ nmf.feats <- nmf_feat_imp(h, 0.67)
 
 ```{r}
 all.feats <- c(unlist(anova.feats), unlist(pca.feats), unlist(nmf.feats)) 
-all.feats <- gsub("_.*", "", all.feats)
 
 results <- list()
 
 for(i in 1:8){ # for all labs
   print(i)
   
-  results[[i]] <- data.frame(matrix(ncol = 6))
-  colnames(results[[i]]) <- c("Name", "lab", "MF", "ANOVA", "PCA", "NMF")
+  results[[i]] <- data.frame(matrix(ncol = 7))
+  colnames(results[[i]]) <- c("Name", "lab", "MF", "InChiKey", "ANOVA", "PCA", "NMF")
   
   for(j in 1:length(all.feats)){ # for all features that are significant anywhere
     #print(j)
@@ -123,7 +163,8 @@ for(i in 1:8){ # for all labs
       results[[i]] <- rbind(results[[i]], c("Name" = all.feats[j], 
                                             "lab" = names(anova.feats)[[i]],
                                             "MF" = unique(comp.found.na.filter[[i]]$MF[
-                                              which(comp.found.na.filter[[i]]$Name == all.feats[j])]),
+                                              which(row.names(comp.found.na.filter[[i]]) == all.feats[j])]),
+                                            "InChiKey" = comp.found.na.filter[[i]]$InChiKey2D[which(row.names(comp.found.na.filter[[i]]) == all.feats[j])],
                                             "ANOVA" = 1, 
                                             "PCA" = 1, 
                                             "NMF" = 1))
@@ -138,7 +179,8 @@ for(i in 1:8){ # for all labs
       results[[i]] <- rbind(results[[i]], c("Name" = all.feats[j], 
                                             "lab" = names(anova.feats)[[i]],
                                             "MF" = unique(comp.found.na.filter[[i]]$MF[
-                                              which(comp.found.na.filter[[i]]$Name == all.feats[j])]),
+                                              which(row.names(comp.found.na.filter[[i]]) == all.feats[j])]),
+                                            "InChiKey" = comp.found.na.filter[[i]]$InChiKey2D[which(row.names(comp.found.na.filter[[i]]) == all.feats[j])],
                                             "ANOVA" = 1, 
                                             "PCA" = 1, 
                                             "NMF" = 0))
@@ -153,7 +195,8 @@ for(i in 1:8){ # for all labs
       results[[i]] <- rbind(results[[i]], c("Name" = all.feats[j], 
                                             "lab" = names(anova.feats)[[i]],
                                             "MF" = unique(comp.found.na.filter[[i]]$MF[
-                                              which(comp.found.na.filter[[i]]$Name == all.feats[j])]),
+                                              which(row.names(comp.found.na.filter[[i]]) == all.feats[j])]),
+                                            "InChiKey" = comp.found.na.filter[[i]]$InChiKey2D[which(row.names(comp.found.na.filter[[i]]) == all.feats[j])],
                                             "ANOVA" = 1, 
                                             "PCA" = 0, 
                                             "NMF" = 1))
@@ -168,7 +211,8 @@ for(i in 1:8){ # for all labs
       results[[i]] <- rbind(results[[i]], c("Name" = all.feats[j], 
                                             "lab" = names(anova.feats)[[i]],
                                             "MF" = unique(comp.found.na.filter[[i]]$MF[
-                                              which(comp.found.na.filter[[i]]$Name == all.feats[j])]),
+                                              which(row.names(comp.found.na.filter[[i]]) == all.feats[j])]),
+                                            "InChiKey" = comp.found.na.filter[[i]]$InChiKey2D[which(row.names(comp.found.na.filter[[i]]) == all.feats[j])],
                                             "ANOVA" = 0, 
                                             "PCA" = 1, 
                                             "NMF" = 1))
@@ -183,7 +227,8 @@ for(i in 1:8){ # for all labs
       results[[i]] <- rbind(results[[i]], c("Name" = all.feats[j], 
                                             "lab" = names(anova.feats)[[i]],
                                             "MF" = unique(comp.found.na.filter[[i]]$MF[
-                                              which(comp.found.na.filter[[i]]$Name == all.feats[j])]),
+                                              which(row.names(comp.found.na.filter[[i]]) == all.feats[j])]),
+                                            "InChiKey" = comp.found.na.filter[[i]]$InChiKey2D[which(row.names(comp.found.na.filter[[i]]) == all.feats[j])],
                                             "ANOVA" = 1, 
                                             "PCA" = 0, 
                                             "NMF" = 0))
@@ -198,7 +243,8 @@ for(i in 1:8){ # for all labs
       results[[i]] <- rbind(results[[i]], c("Name" = all.feats[j], 
                                             "lab" = names(anova.feats)[[i]],
                                             "MF" = unique(comp.found.na.filter[[i]]$MF[
-                                              which(comp.found.na.filter[[i]]$Name == all.feats[j])]),
+                                              which(row.names(comp.found.na.filter[[i]]) == all.feats[j])]),
+                                            "InChiKey" = comp.found.na.filter[[i]]$InChiKey2D[which(row.names(comp.found.na.filter[[i]]) == all.feats[j])],
                                             "ANOVA" = 0, 
                                             "PCA" = 1, 
                                             "NMF" = 0))
@@ -213,7 +259,8 @@ for(i in 1:8){ # for all labs
       results[[i]] <- rbind(results[[i]], c("Name" = all.feats[j], 
                                             "lab" = names(anova.feats)[[i]],
                                             "MF" = unique(comp.found.na.filter[[i]]$MF[
-                                              which(comp.found.na.filter[[i]]$Name == all.feats[j])]),
+                                              which(row.names(comp.found.na.filter[[i]]) == all.feats[j])]),
+                                            "InChiKey" = comp.found.na.filter[[i]]$InChiKey2D[which(row.names(comp.found.na.filter[[i]]) == all.feats[j])],
                                             "ANOVA" = 0, 
                                             "PCA" = 0, 
                                             "NMF" = 1))
@@ -239,7 +286,7 @@ results.df$total.sig <- apply(sig.numbers, 1, sum)
 # add number of labs where the MF was important in at least one analysis
 mf <- unique(results.df$MF)
 
-results.df$total.lab <- NA
+results.df$total.lab.mf <- NA
 
 for(i in 1:length(mf)){
   
@@ -251,7 +298,7 @@ for(i in 1:length(mf)){
     
     if(results.df$MF[j] == mf[i]){
       
-      results.df$total.lab[j] <- n.labs
+      results.df$total.lab.mf[j] <- n.labs
       
     }
     
@@ -259,21 +306,53 @@ for(i in 1:length(mf)){
    
 }
 
+# add number of labs where the InChiKey was important in at least one analysis
+inchi <- unique(results.df$InChiKey)
 
-write.csv(results.df, file = "./data/biomarker_input/important_features_WITH_duplicates.csv", row.names = F)
+results.df$total.lab.inchi <- NA
+
+for(i in 1:length(inchi)){
+  
+  if(is.na(inchi[i])){next}
+  
+  subset.data <- results.df[which(results.df$InChiKey == inchi[i]),]
+  
+  n.labs <- length(unique(subset.data$lab))
+ 
+  for(j in 1:nrow(results.df)){
+    
+    if(is.na(results.df$InChiKey[j])){next}
+    
+    if(results.df$InChiKey[j] == inchi[i]){
+      
+      results.df$total.lab.inchi[j] <- n.labs
+      
+    }
+    
+  }
+   
+}
+
+write.csv(results.df, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/important_features_WITH_duplicates.csv", row.names = F)
 ```
 
-## How many metabolites were significant in at least one analysis in X labs?
+## How many metabolites (based on InChiKey or MF) were significant in at least one analysis in X labs?
 
 ```{r}
-n.sig.labs <- data.frame(matrix(nrow = length(unique(results.df$total.lab)), ncol = 3))
-colnames(n.sig.labs) <- c("Number of Labs", "Number of Metabs")
+n.sig.labs <- data.frame(matrix(nrow = length(unique(results.df$total.lab.mf)), ncol = 3))
+colnames(n.sig.labs) <- c("Number of Labs", "Number of Metabs by MF", "Number of Metabs by InChiKey")
 
 for(i in 1:nrow(n.sig.labs)){
   
   n.sig.labs$`Number of Labs`[i] <- paste0("Significant in ", i, " labs")
   
-  n.sig.labs$`Number of Metabs`[i] <- length(unique(results.df$MF[which(results.df$total.lab == i)]))
+  n.sig.labs$`Number of Metabs by MF`[i] <- length(unique(results.df$MF[which(results.df$total.lab.mf == i 
+                                                        # & results.df$total.sig == 3
+                                                                              )]))
+  
+  n.sig.labs$`Number of Metabs by InChiKey`[i] <- length(unique(results.df$InChiKey[which(results.df$total.lab.inchi == i 
+                                                        #  & results.df$total.sig == 3
+                                                                                          )]))
   
 }
 
@@ -284,156 +363,528 @@ for(i in 1:nrow(n.sig.analyses)){
   
   n.sig.analyses$`Number of analyses`[i] <- paste0("Significant in ", i, " analyses")
   
-  n.sig.analyses$`Number of Metabs`[i] <- length(unique(results.df$MF[which(results.df$total.sig == i)]))
+  n.sig.analyses$`Number of Metabs by MF`[i] <- length(unique(results.df$MF[which(results.df$total.sig == i)]))
+  
+  n.sig.analyses$`Number of Metabs by InChiKey`[i] <- length(unique(results.df$InChiKey[which(results.df$total.sig == i)]))
   
 }
 
 ```
 
-# Boxplots of features significant in at least 1 analysis in all 8 labs
+# Prep data: sort by MF or InChiKey
+
+## prep for re-organizing by MF
 
 ```{r}
-load("./data/duplicate_input/imputed_data.RData")
 
-metabs.8 <- unique(results.df$MF[which(results.df$total.lab == 8)])
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/reproducibility_input/duplicated_filtered_data.RData")
 
-metab.boxplot <- function(norm.impute, metab){
-  # norm.impute = input data for boxplots
-  # metab = index of metabolite to plot from list (like metabs.8)
-  
-png(paste0("./outputs/biomarker_boxplots_", metab, ".png"), width = 1600, height = 400)
-par(mfrow = c(1, 8))
-  
-  for(lab in 1:length(norm.impute)){
-    
-    # Extract abundance data
-    metab.data <- norm.impute[[lab]][which(comp.found.na.filter[[lab]]$MF == metab)]
-  
-    # Average data if multiple features for the MF
-    metab.avg <- rowMeans(metab.data, na.rm = T)
-    
-    # Report number of features averaged
-    n.feats <- ncol(metab.data)
-    
-    # Prepare for boxplots
-    box.data <- data.frame("avg.abund" = metab.avg, "sample.group" = gsub("_.*", "", row.names(metab.data)))
-    box.data$sample.group <- factor(box.data$sample.group, levels = c("a", "b", "c", "ab", "ac", "bc", "abc"))
-    box.data <- box.data[order(box.data$sample.group),]
-  
-    # Make boxplots
-    ## set group colors with gradients within groups
-      group.colors <- c("red","gold","blue","orange","purple","darkgreen","brown")
-      names(group.colors) <- levels(box.data$sample.group)
+metabs.8 <- unique(results.df$MF[which(results.df$total.lab.mf == 8 
+                                                   #& results.df$total.sig == 3
+                                                  )])
 
+# Subset and prep abundance data
+
+subset.metabs <- function(data.list, metab.list, lab, comp.meta, column, scale.metabs = F){
+                      # data.list = metabolite abundance data in all labs
+                      # metab.list = list of metabs to subset into
+                      # lab = numeric index of lab
+                      # comp.meta = metabolite meta data for all labs, no duplicate filtering
+                      # column = column used to subset (MF or InChiKey)
+                      # scale.metabs = logical indicating whether to scale abundances for each lab (recommended for heatmap)
+                      
+                      
+                      lab.comp <- comp.meta[[lab]]
+                      lab.data <- data.list[[lab]]
+                      colnames(lab.data) <- row.names(lab.comp)
+                      
+                      subset.data <- lab.data[,which(lab.comp[,c(column)] %in% metab.list)]
+                      
+                      if(scale.metabs == T){
+                        
+                       subset.data <- scale(subset.data, scale = T, center = T)
+                         
+                      }else{
+                        
+                        subset.data <- subset.data
+                        
+                      }
+                      
+                      subset.comp <- subset(lab.comp[which(lab.comp[,c(column)] %in% metab.list),],
+                                            select = c(Name, MF, InChiKey2D))
+                      
+                      return(list(data = subset.data, meta = subset.comp))
+                      
+                    }
+
+lab.subset.data<- lapply(c("Lab1", "Lab2", "Lab3", "Lab4", "Lab5", "Lab6", "Lab7", "Lab8"), 
+                          function(x) subset.metabs(norm.impute, metabs.8, x, comp.found.na.filter, "MF", scale.metabs = T))
+names(lab.subset.data) <- names(norm.impute)
+```
+
+# Reorganize data to be subset by MF (not by lab) and only include features that were significant in all three analyses
+
+```{r}
+# list significant features
+feats.sig <- c(unlist(anova.feats), unlist(pca.feats), unlist(nmf.feats)) 
+
+feats.sig <- unique(feats.sig)
+
+# create empty results list
+mf.subset <- list()
+length(mf.subset) <- length(metabs.8)
+names(mf.subset) <- metabs.8
+
+# loop through results to subset and reorganize
+
+    for(mf in 1:length(mf.subset)){
+      for(lab in 1:length(lab.subset.data)){
+        
+       # find column indexes in lab.subset.data with MF == mf
+        cols <- which(lab.subset.data[[lab]]$meta$MF == names(mf.subset)[[mf]])
+        
+      # subset and melt data
       
-      boxplot(box.data$avg.abund ~ box.data$sample.group, 
-            col = group.colors,
-            main = paste(names(norm.impute)[[lab]], "-", metab, "-", n.feats, "features"),
-            xlab = "",
-            ylab = "",
-            xaxt = "n",
-            yaxt = "n",
-            cex.axis = 0.8)
-    axis(1, at = 1:7, label = c("a", "b", "c", "ab", "ac", "bc", "abc"), tck = -0.05)
-    axis(2, at = 1:5, label = seq(min(box.data$avg.abund), max(box.data$avg.abund), length.out = 5))
+      if(length(cols) > 1){
+        
+        new.data <- lab.subset.data[[lab]]$data[,cols]
+
+        melt.data <- reshape2::melt(new.data)
+        
+        colnames(melt.data) <- c("sample.name", "feature", "value")
+        
+      # add sample group and lab name columns
+        melt.data$lab <- names(lab.subset.data)[[lab]]
+        
+        melt.data$sample.group <- gsub("_.*", "", melt.data$sample.name)
+        
+      # add MF column
+        
+        mfs <- rownames_to_column(lab.subset.data[[lab]]$meta, var = "feature")
+        
+        fin.data <- merge(melt.data, subset(mfs, select = c(feature, MF, Name)), by = "feature")
+        
+      # add column indicating if a feature was also selected as a "Most Likely Feature" during duplicate filtering
+        
+        fin.data$retained <- NA
+        
+        for(row in 1:nrow(fin.data)){
+          
+          if(fin.data$feature[row] %in% row.names(comp.std[[lab]])){
+            
+            fin.data$retained[row] <- "X"
+            
+          }
+          
+        }
+        
+        fin.data$retained[is.na(fin.data$retained)] <- ""
+        
+      # only retain significant feature bins
+        fin.data <- fin.data[which(fin.data$feature %in% feats.sig),]
+  
+      # append lab name to feature bin to avoid duplicate confusion
+        fin.data$feature <- paste0(fin.data$lab, "_", fin.data$feature)
+        
+      }else{
+        
+        # subset data
+        melt.data <- data.frame("sample.name" = row.names(lab.subset.data[[lab]]$data),
+                               "feature" = row.names(lab.subset.data[[lab]]$meta)[cols],
+                               "value" = lab.subset.data[[lab]]$data[,cols])
+        
+        # add sample group, MF, and lab name columns
+        melt.data$lab <- names(lab.subset.data)[[lab]]
+        
+        melt.data$sample.group <- gsub("_.*", "", melt.data$sample.name)
+        
+        # add MF and feature name column
+        
+        mfs <- rownames_to_column(lab.subset.data[[lab]]$meta, var = "feature")
+        
+        fin.data <- merge(melt.data, subset(mfs, select = c(feature, MF, Name)), by = "feature")
+        
+              # add column indicating if a feature was also selected as a "Most Likely Feature" during duplicate filtering
+        
+        fin.data$retained <- NA
+        
+        for(row in 1:nrow(fin.data)){
+          
+          if(fin.data$feature[row] %in% row.names(comp.std[[lab]])){
+            
+            fin.data$retained[row] <- "X"
+            
+          }
+          
+        }
+        
+        fin.data$retained[is.na(fin.data$retained)] <- ""
+        
+        # only retain significant feature bins
+        fin.data <- fin.data[which(fin.data$feature %in% feats.sig),]
+        
+        # append lab name to feature bin to avoid duplicate confusion
+        fin.data$feature <- paste0(fin.data$lab, "_", fin.data$feature)
+        
+      }
+       
+        
+      # add to results list
+        if(lab == 1){
+          
+          mf.subset[[mf]] <- fin.data
+          
+        }else{
+          
+          mf.subset[[mf]] <- rbind(mf.subset[[mf]], fin.data)
+          
+        }
+      }
+    }
+```
+
+# Reorganize to subset by InChiKey
+
+```{r}
+# Reorganize data to be subset by InChiKey (not by lab) and only include features that were significant in at least one analysis
+
+# subset by lab
+metabs.8.inchi <- unique(results.df$InChiKey[which(results.df$total.lab.inchi == 8 
+                                                  # & results.df$total.sig == 3
+                                                  )])
+
+lab.subset.data.inchi <- lapply(c("Lab1", "Lab2", "Lab3", "Lab4", "Lab5", "Lab6", "Lab7", "Lab8"), 
+                          function(x) subset.metabs(norm.impute, metabs.8.inchi, x, comp.found.na.filter, "InChiKey2D", scale.metabs = T))
+names(lab.subset.data.inchi) <- names(norm.impute)
+
+# list significant features
+feats.sig <- c(unlist(anova.feats), unlist(pca.feats), unlist(nmf.feats)) 
+
+feats.sig <- unique(feats.sig)
+
+# create empty results list
+inchi.subset <- list()
+length(inchi.subset) <- length(metabs.8.inchi)
+names(inchi.subset) <- metabs.8.inchi
+
+# loop through results to subset and reorganize
+
+    for(inchi in 1:length(inchi.subset)){
+      for(lab in 1:length(lab.subset.data.inchi)){
+        
+       # find column indexes in lab.subset.data.inchi with inchi == inchi
+        cols <- which(lab.subset.data.inchi[[lab]]$meta$InChiKey2D == names(inchi.subset)[[inchi]])
+        
+      # subset and melt data
+      
+      if(length(cols) > 1){
+        
+        new.data <- lab.subset.data.inchi[[lab]]$data[,cols]
+
+        melt.data <- reshape2::melt(new.data)
+        
+        colnames(melt.data) <- c("sample.name", "feature", "value")
+        
+      # add sample group and lab name columns
+        melt.data$lab <- names(lab.subset.data.inchi)[[lab]]
+        
+        melt.data$sample.group <- gsub("_.*", "", melt.data$sample.name)
+        
+      # add InChi and MF columns
+        
+        inchis <- rownames_to_column(lab.subset.data.inchi[[lab]]$meta, var = "feature")
+        
+        fin.data <- merge(melt.data, subset(inchis, select = c(feature, InChiKey2D, Name, MF)), by = "feature")
+        
+      # add column indicating if a feature was also selected as a "Most Likely Feature" during duplicate filtering
+        
+        fin.data$retained <- NA
+        
+        for(row in 1:nrow(fin.data)){
+          
+          if(fin.data$feature[row] %in% row.names(comp.std[[lab]])){
+            
+            fin.data$retained[row] <- "X"
+            
+          }
+          
+        }
+        
+        fin.data$retained[is.na(fin.data$retained)] <- ""
+        
+      # only retain significant feature bins
+        fin.data <- fin.data[which(fin.data$feature %in% feats.sig),]
+  
+      # append lab name to feature bin to avoid duplicate confusion
+        fin.data$feature <- paste0(fin.data$lab, "_", fin.data$feature)
+        
+      }else{
+        
+        # subset data
+        melt.data <- data.frame("sample.name" = row.names(lab.subset.data.inchi[[lab]]$data),
+                               "feature" = row.names(lab.subset.data.inchi[[lab]]$meta)[cols],
+                               "value" = lab.subset.data.inchi[[lab]]$data[,cols])
+        
+        # add sample group and lab name columns
+        melt.data$lab <- names(lab.subset.data.inchi)[[lab]]
+        
+        melt.data$sample.group <- gsub("_.*", "", melt.data$sample.name)
+        
+      # add InChi and MF columns
+        
+        inchis <- rownames_to_column(lab.subset.data.inchi[[lab]]$meta, var = "feature")
+        
+        fin.data <- merge(melt.data, subset(inchis, select = c(feature, InChiKey2D, Name, MF)), by = "feature")
+        
+      # add column indicating if a feature was also selected as a "Most Likely Feature" during duplicate filtering
+        
+        fin.data$retained <- NA
+        
+        for(row in 1:nrow(fin.data)){
+          
+          if(fin.data$feature[row] %in% row.names(comp.std[[lab]])){
+            
+            fin.data$retained[row] <- "X"
+            
+          }
+          
+        }
+        
+        fin.data$retained[is.na(fin.data$retained)] <- ""
+        
+      # only retain significant feature bins
+        fin.data <- fin.data[which(fin.data$feature %in% feats.sig),]
+  
+      # append lab name to feature bin to avoid duplicate confusion
+        fin.data$feature <- paste0(fin.data$lab, "_", fin.data$feature)
+        
+      }
+        
+      # add to results list
+        if(lab == 1){
+          
+          inchi.subset[[inchi]] <- fin.data
+          
+        }else{
+          
+          inchi.subset[[inchi]] <- rbind(inchi.subset[[inchi]], fin.data)
+          
+        }
+      }
+    }
+
+```
+
+# Remove peptides from the metabolites of interest
+
+```{r}
+# List MFs that correspond to putative peptide IDs
+
+peptide.mf <- c("C10H16N2O4", "C10H18N2O5", "C10H19N3O4", "C10H20N2O3", "C11H20N2O3", "C11H20N2O5", "C11H22N2O3", "C11H23N5O3", "C12H16N2O3", "C12H25N3O3", "C13H18N2O4", "C13H23N3O4", "C14H20N2O3", "C14H20N2O4", "C15H22N2O3", "C15H22N2O4", "C16H21N3O3", "C8H14N2O4", "C8H16N2O3", "C9H17N3O4", "C9H17N3O4", "C9H18N2O3", "C9H18N2O4", "C17H31N3O4", "C16H29N3O4")
+
+# Remove peptides
+
+index <- which(names(mf.subset) %in% peptide.mf)  
+  
+no.pep.subset.mf <- mf.subset[-index]
+
+# List InChiKeys corresponding to MFs of putative peptides
+index.inchi <- c()
+
+for(inchi in 1:length(inchi.subset)){
+  
+  if(any(inchi.subset[[inchi]]$MF %in% peptide.mf)){
+    
+    index.inchi <- c(index.inchi, inchi)
     
   }
-      dev.off()
 }
 
-lapply(metabs.8, function(x) metab.boxplot(norm.impute, x))
-
-
+# Remove peptides
+  
+no.pep.subset.inchi <- inchi.subset[-index.inchi]
 
 ```
 
 # Heatmap of figures significant in at least 1 analysis in all 8 labs
 
+Plot all features in all labs per MF (1 plot per MF) as a function of sample group
+
 ```{r}
-load("./data/duplicate_input/imputed_data.RData")
+# heatmap of each MF
 
-metabs.8 <- unique(results.df$MF[which(results.df$total.lab == 8)])
-
-# Subset and prep abundance data
-
-subset.metabs <- function(data.list, metab.list, lab, comp.meta, scale.metabs = F){
+subset.heatmap <- function(mf.data){
+  # mf.data = data frame of melted, scaled abundance values, sorted by MF or InChi for each lab
   
-  lab.comp <- comp.meta[[lab]]
-  lab.data <- data.list[[lab]]
-  colnames(lab.data) <- row.names(lab.comp)
+  # sort data by lab
   
-  subset.data <- lab.data[,which(lab.comp$MF %in% metab.list)]
+  mf.data$lab <- factor(mf.data$lab, levels = c("Lab8", "Lab7", "Lab6", "Lab5", "Lab4", "Lab3", "Lab2", "Lab1"))
+  mf.data <- mf.data[order(mf.data$lab),]
   
-  if(scale.metabs == T){
+  # set order for groups
+  
+  mf.data$sample.group <- factor(mf.data$sample.group, levels = c("a", "b", "c", "ab", "ac", "bc", "abc"))
+  
+  # include whether feature was retained in the feature name
+  
+  mf.data$feature <- paste0(mf.data$retained, "-", mf.data$feature)
+  
+  # plot
+    ## abundance data
+      
+    abundance.heat <- ggplot(mf.data, aes(sample.group, feature, fill = value)) +
+                          geom_tile() +
+                          labs(title = paste0(mf.data$MF, " (", gsub(" .*", "", mf.data$Name), ")"), 
+                               x = "sample group",
+                               y = "") +
+                          scale_fill_gradient(low = "white", high = "darkblue") +
+                          theme_classic() +
+                          theme(axis.text.y = element_text(size = 5)) +
+                          scale_y_discrete(labels = function(x) gsub("-.*$", "", x))
     
-   subset.data <- scale(subset.data, scale = T)
-     
-  }
-  
-  subset.comp <- subset(lab.comp[which(lab.comp$MF %in% metab.list),],
-                        select = c(Name, MF))
-  
-  return(list(data = subset.data, meta = subset.comp))
-  
-}
-
-lab.subset.data <- lapply(c("Lab1", "Lab2", "Lab3", "Lab4", "Lab5", "Lab6", "Lab7", "Lab8"), 
-                          function(x) subset.metabs(norm.impute, metabs.8, x, comp.found.na.filter, scale.metabs = T))
-names(lab.subset.data) <- names(norm.impute)
-
-# heatmap function
-
-subset.heatmap <- function(lab.subset.data, lab, meta.data){
-  
-  heat.data <- lab.subset.data[[lab]]
-  heat.data$meta <- heat.data$meta[order(heat.data$meta$MF),]
-  heat.data$data <- heat.data$data[,order(heat.data$meta$MF)]
-  
-  annotations <- data.frame(MF = heat.data$meta$MF)
-  rownames(annotations) <- colnames(heat.data$data)
-  
-  ann_colors <- list(MF = c(C11H12N2O2 = "#FF8080",
-                            C11H20N2O3 = "#FFC266", 
-                            C16H29N3O4 = "#9999ff", 
-                            C4H7NO4 = "#79d279", 
-                            C8H16N2O3 = "#d9b3ff", 
-                            C8H20NO6P = "#dfbf9f",
-                            C10H18N2O5 = "#c5c4c2"),
-                     group = c(a = "red",
-                               ab = "orange", 
-                               abc = "brown", 
-                               ac = "purple", 
-                               b = "gold", 
-                               bc = "forestgreen", 
-                               c = "blue"))
-  
-  meta.data$group <- factor(meta.data$group, levels = c("a", "b", "c", "ab", "ac", "bc", "abc"))
-  heat.data$data <- heat.data$data[order(meta.data$group),]
-  meta.data <- meta.data[order(meta.data$group),]
-  
-  heat <- as.ggplot(pheatmap(t(heat.data$data),
-                     show_colnames = F,
-                     show_rownames = F,
-                     cluster_rows = F,
-                     cluster_cols = F,
-                     annotation_row = annotations,
-                     annotation_col = subset(meta.data, select = c(group)),
-                     annotation_colors = ann_colors,
-                     main = lab,
-                     legend = F,
-                     annotation_legend = F,
-                     fontsize = 5))  
+    ## annotation data
+    
+    annot.data <- mf.data %>% distinct(feature, lab)
+    
+    lab.heat <- ggplot(annot.data, aes(x = 1, y = feature, fill = lab)) +
+                    geom_tile() +
+                    labs(x = "", y = "features by lab") +
+                    scale_fill_brewer(type = "qual", palette = 2) +
+                    theme_classic() +
+                    theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+                          axis.ticks = element_blank(),
+                          legend.position = "none",
+                          legend.key.size = unit(2, "mm"),
+                          line = element_blank())
+    
+    ## combine plots
+    
+    heat <- (lab.heat | abundance.heat) + plot_layout(ncol = 2, nrow = 1, widths = unit(c(2, 5), c("mm", "null")))
+    
   
   return(heat)
   }
 
 # heatmap
 
-heatmaps <- lapply(c("Lab1", "Lab2", "Lab3", "Lab4", "Lab5", "Lab6", "Lab7", "Lab8"), 
-                    function(x) subset.heatmap(lab.subset.data, x, meta.data))
-heat.arrange <- ggarrange(plotlist = heatmaps, nrow = 2, ncol = 4, common.legend = T)
+## All overlap MF (26 MFs)
 
-ggsave("./outputs/biomarker_heatmap.png", heat.arrange, width = 6, height = 4, dpi = 300, units = "in")
+    heatmaps.all <- lapply(mf.subset, function(x) subset.heatmap(x))
+    
+    heat.arrange.all <- ggarrange(plotlist = heatmaps.all, nrow = 5, ncol = 8, common.legend = F)
+    
+    ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/biomarker_heatmap_all.png", heat.arrange.all, width = 30, height = 10, dpi = 300, units = "in", limitsize = F)
+ 
+## No peptides (11 MFs)
+    
+    heatmaps.nopep <- lapply(no.pep.subset.mf, function(x) subset.heatmap(x))
+    
+    heat.arrange.nopep <- ggarrange(plotlist = heatmaps.nopep, nrow = 5, ncol = 3, common.legend = F)
+    
+    ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/biomarker_heatmap_noPeptides.png", heat.arrange.nopep, width = 16, height = 16, dpi = 300, units = "in", limitsize = F)   
+    
+    
+## InChiKey (22 InChis)
+    
+    heatmaps.inchi <- lapply(inchi.subset, function(x) subset.heatmap(x))
+    
+    heat.arrange.inchi <- ggarrange(plotlist = heatmaps.inchi, nrow = 6, ncol = 6, common.legend = F)
+    
+    ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/biomarker_heatmap_inchi.png", heat.arrange.inchi, width = 30, height = 11, dpi = 300, units = "in", limitsize = F)   
+    
+## InChiKey no peptides (9 MFs)
+    
+    heatmaps.inchi.nopep <- lapply(no.pep.subset.inchi, function(x) subset.heatmap(x))
+    
+    heat.arrange.inchi.nopep <- ggarrange(plotlist = heatmaps.inchi.nopep, nrow = 3, ncol = 4, common.legend = F)
+    
+    ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/biomarker_heatmap_inchi_noPeptides.png", heat.arrange.inchi.nopep, width = 20, height = 15, dpi = 300, units = "in", limitsize = F)   
+
+    
+# legend of lab colors
+    lab.heat.data <- no.pep.subset.inchi$KDXKERNSBIXSRK %>% distinct(feature, lab)
+      
+    lab.heat <- ggplot(lab.heat.data, aes(x = 1, y = feature, fill = lab)) +
+                    geom_tile() +
+                    labs(x = "", y = "features by lab") +
+                    scale_fill_brewer(type = "qual", palette = 2) +
+                    theme_classic() +
+                    theme(axis.text.y = element_blank(), axis.text.x = element_blank(),
+                          axis.ticks = element_blank(),
+                          legend.key.size = unit(2, "mm"),
+                          line = element_blank())
+    
+    ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/biomarker_heatmap_labLegend.png", lab.heat, dpi = 300)  
 ```
 
+# Upset of MFs that met cutoffs
+
+```{r}
+# Prep upset data
+
+## only use results that meet cutoffs in all 3 analyses
+
+top.results <- results.df[which(results.df$total.sig == 3),]
+
+## create a list of each lab's MFs
+
+### function to extract MFs for each lab
+lab.mf <- function(results.df, lab){
+  
+  result <- unique(results.df$MF[which(results.df$lab == lab)])
+  
+  return(result)
+  
+}
+
+### apply to each lab
+labs <- unique(top.results$lab)
+mf.upset.data <- lapply(labs, function(x) lab.mf(results.df, x))
+names(mf.upset.data) <- labs
+
+# Plot upset
+
+png(filename = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/biomarker_upset.png", width = 32, height = 16, units = "in", res = 300)
+upset(fromList(mf.upset.data), nsets = 8, nintersects = NA, sets = c("Lab1", "Lab2", "Lab3", "Lab4", "Lab5", "Lab6", "Lab7", "Lab8"), keep.order = T, text.scale = 3)
+
+```
+
+# Boxplot of significant features in at least 1 analysis in all 8 labs
+
+Plot individual features as facets of plot: 1 plot per MF per lab
+
+```{r}
+facet.boxplot <- function(mf.data){
+  # mf.data = data frame of melted, scaled abundance values, sorted by MF for each lab
+
+    # set group colors
+      group.colors <- c("red","gold","blue","orange","purple","darkgreen","brown")
+      names(group.colors) <- c("a", "b", "c", "ab", "ac", "bc", "abc")
+  
+    # adjust sample group order
+      mf.data$sample.group <- factor(mf.data$sample.group, levels = c("a", "b", "c", "ab", "ac", "bc", "abc"))
+      
+  ggplot(mf.data, aes(x = sample.group, y = value, fill = sample.group)) +
+    geom_boxplot() +
+    theme_classic() +
+    scale_fill_manual(values = group.colors) +
+    facet_wrap(feature~lab) +
+    labs(title = unique(mf.data$MF))
+  
+}
+
+box.list <- lapply(mf.subset, function(x) facet.boxplot(x))
+
+pdf("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/boxplots_Mffacet.pdf", width = 8.5, height = 11)
+
+for (i in 1:length(box.list)) {
+  print(box.list[[i]])
+}
+
+dev.off()
+
+#ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/biomarker_heatmap.png", heat.arrange, width = 20, height = 10, dpi = 300, units = "in")
+
+```
 

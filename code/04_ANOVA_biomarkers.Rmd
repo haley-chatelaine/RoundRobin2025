@@ -16,7 +16,7 @@ Run ANOVA on all filtered and prepared data sets (normalized and ratio) and extr
 # Load data
 
 ```{r}
-load("./data/duplicate_input/imputed_data.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
 
 norm.log <- lapply(norm.impute, log2)
 ```
@@ -24,10 +24,11 @@ norm.log <- lapply(norm.impute, log2)
 # Function for ANOVA 
 
 ```{r}
-rr.anova <- function(data, meta.data, variable){
+rr.anova <- function(data, meta.data, variable, comp.data){
   # data = list of metab data from all labs
   # meta.data = meta data including study design
   # variable = independent variable for anova
+  # comp.data = list of metabolite meta-data 
   
   # basic anova function
   
@@ -47,9 +48,9 @@ rr.anova <- function(data, meta.data, variable){
               
   for(i in 1:length(data)){
     
-    results[[i]] <- apply(data[[i]], 2, function(x) metab.anova(x, "group"))
+    results[[i]] <- data.frame("feature" = row.names(comp.data[[i]]), "pvalue" = apply(data[[i]], 2, function(x) metab.anova(x, "group")))
     
-    names(results[[i]]) <- colnames(data[[i]])
+    #names(results[[i]]) <- colnames(data[[i]])
     
   }
   
@@ -63,11 +64,13 @@ rr.anova <- function(data, meta.data, variable){
 # Run ANOVA and adjust p-values
 
 ```{r}
-anova.results <- rr.anova(norm.log, meta.data, "group")
+anova.results <- rr.anova(norm.log, meta.data, "group", comp.found.na.filter)
 
 for(i in 1:length(anova.results)){
   
-  anova.results[[i]] <- p.adjust(anova.results[[i]], method = "fdr")
+  anova.results[[i]]$`adj.p` <- NA
+  
+  anova.results[[i]]$`adj.p` <- p.adjust(anova.results[[i]]$pvalue, method = "fdr")
   
 }
 ```
@@ -75,5 +78,5 @@ for(i in 1:length(anova.results)){
 # Save results for filtering in biomarker rmd
 
 ```{r}
-save(anova.results, comp.found.na.filter, file = "./data/biomarker_input/anova_features_WITH_duplicates.RData")
+save(anova.results, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/anova_features_WITH_duplicates.RData")
 ```

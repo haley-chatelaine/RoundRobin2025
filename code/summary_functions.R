@@ -2,8 +2,9 @@
 
 # Load packages
 
-packages <- c("tidyverse", "dplyr", "ggplot2", "ggpattern", "ggvenn", "tidyr", "UpSetR", "plotly", "devtools",
-              "RColorBrewer", "ggsci", "ggpubr", "pheatmap", "grafify", "pheatmap",
+packages <- c("tidyverse", "dplyr", "effectsize",
+              "ggplot2", "ggpattern", "ggvenn", "tidyr", "UpSetR", "plotly", "devtools",
+              "RColorBrewer", "ggsci", "ggpubr", "pheatmap", "grafify", "pheatmap", "ggplotify", "patchwork",
               "openxlsx", "data.table", "factoextra", "htmltools", "colorspace")
 
 installed_packages <- packages %in% rownames(installed.packages())
@@ -13,7 +14,7 @@ if (any(installed_packages == FALSE)) {
 
 if (!requireNamespace("ncats/RAMP-DB", quietly = TRUE)) {
   library(devtools)
-  install_github("ncats/RAMP-DB")
+  #install_github("ncats/RAMP-DB")
 }
 
 if("pmp" %in% installed.packages() == F){
@@ -21,7 +22,7 @@ if("pmp" %in% installed.packages() == F){
 }
 
 library(pmp)
-library(RaMP)
+#library(RaMP)
 invisible(lapply(packages, library, character.only = TRUE))
 
 # Read files
@@ -1423,13 +1424,25 @@ make.pca <- function(metab, meta, class, group.shape.name = NULL,
 # Evaluate PCA based on regression with study design
 
 eval.pca <- function(metab, meta, class,
-                     do.log2 = T, centered = FALSE, scaled = FALSE){
+                     do.log2 = T, centered = FALSE, scaled = FALSE,
+                     return.p = F,
+                     return.r = F){
   # metab = metabolite data to plot with variables in columns and samples in rows
   # meta = meta data corresponding to metab
   # class = variable name from meta used for coloring scores plot
+  # return.p = indicate whether to return p-value
+  # return.r = indicate whether to return correlation estimate (eta-squared value of ANOVA)
   
+    # Check yourself
+    if(return.p == T & return.r == T){
+      print("OOPS only select returning p-value OR estimate value")
+    }
   
-    # Set data frames for plot
+    if(return.p == F & return.r == F){
+      print("OOPS make sure you select returning p-value OR estimate value")
+    }
+  
+      # Set data frames for plot
     
     if(do.log2 == T){
       pca_data <- log2(metab)
@@ -1447,13 +1460,37 @@ eval.pca <- function(metab, meta, class,
     
     regression.vals <- data.frame(matrix(nrow = ncol(pca_plotdata) - 1, ncol = 1))
     row.names(regression.vals) <- colnames(pca_plotdata)[1:ncol(pca_plotdata) - 1]
-    colnames(regression.vals) <- "P-value"
+    
+    if(return.p == T){
+      
+      colnames(regression.vals) <- "P-value"
+      
+    }
+    
+    if(return.r == T){
+      
+      colnames(regression.vals) <- "Effect Size"
+      
+    }
+    
     
     for(i in 1:(ncol(pca_plotdata) - 1)){
       
       model <- anova(lm(pca_plotdata[,i] ~ pca_plotdata$class))
       
-      regression.vals[i,c("P-value")] <- formatC(model$`Pr(>F)`[1], format = "e", digits = 2)
+      if(return.p == T){
+        
+        regression.vals[i,c("P-value")] <- formatC(model$`Pr(>F)`[1], format = "e", digits = 2)
+        
+      }
+      
+      if(return.r == T){
+        
+        eta.sq <- effectsize::eta_squared(model = model)
+        
+        regression.vals[i,c("Effect Size")] <- round(eta.sq$Eta2, 2) 
+        
+      }
       
     }
   
@@ -1575,7 +1612,59 @@ mstus <- function(data, low.bound = 0.2, high.bound = 0.95){
 
 }
   
+# Chris MSTUS
+
+chris.mstus <- function(data, low.bound = 0.2, high.bound = 0.95){
+  # data = metabolite abundance data with samples in rows and metabolites in columns
+  # low.bound = lower quantile for MSTUS as decimal
+  # high.bound = upper quantile for MSTUS as decimal
   
+  # calculate low and high quantiles for each sample and find metabolites outside bounds
+  outliers <- function(x) {
+    
+    lohi <- t(apply(x,1,quantile,c(low.bound, high.bound)))
+    
+  }
+  
+  lohi <- outliers(data)
+  
+  # mark metabolites outside bounds
+  lobinfilt <- hibinfilt <- matrix(0,nrow=nrow(data), ncol=ncol(data))
+  
+  for ( i in 1:nrow(data)) {
+    
+    lobinfilt[ i, which( data[ i , ] < lohi[ i, 1 ] ) ] = 1
+    hibinfilt[ i, which( data[ i , ] > lohi[ i, 2 ] ) ] = 1
+    
+  }
+  
+  sumlo <- colSums(lobinfilt)
+  sumhi <- colSums(hibinfilt)  
+  
+  # find indexes of features with intensities less than the lower bound in 80%+ of samples or greater than the higher bound in < 10% of samples
+  bads <- c( which( sumlo > ( 0.8 * nrow(data) ) ), which( sumhi > 0 & sumhi < ( 0.1 * nrow(data) ) ) )
+  length(bads)
+  length(unique(bads))
+  
+  # calculate scale factor without features outside bounds
+  scalefactors <- rowSums(data[,-bads])
+  
+  # calculate median scale factor
+  median.sf <- median(scalefactors)
+  
+  # calculate normalization factor
+  normfactor <- median.sf / scalefactors
+  
+  # normalize according to normalization factors
+  normmetab <- data * normfactor
+  
+  # add column and row names
+  colnames(normmetab) <- colnames(data)
+  row.names(normmetab) <- row.names(data)
+  
+  return(normmetab)
+  
+}
   
   
   
