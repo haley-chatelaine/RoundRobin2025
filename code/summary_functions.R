@@ -1370,16 +1370,18 @@ make.pca <- function(metab, meta, class, group.shape.name = NULL,
     pca_plotdata$shape <- as.factor(1)
   }
   
+    ## use only filled shape options
   
+    shape.options <- c(21, 22, 23, 24, 25)
   
   if(z.axis == FALSE){
     
     # 2D  using ggplot2
     
     pca_plot <- ggplot(pca_plotdata[which(pca_plotdata$class %in% subset.labels),], 
-      aes(x=PC1, y=PC2, col=class)) + 
+      aes(x=PC1, y=PC2, fill=class)) + 
       geom_point(size = point.size, aes(shape = shape, color = class)) +
-      #scale_shape_manual(shapes) +
+      scale_shape_manual(values = shape.options) +
       guides(size = "none") +
       theme_classic() +
       theme(text = element_text(size = text.size)) +
@@ -1390,7 +1392,7 @@ make.pca <- function(metab, meta, class, group.shape.name = NULL,
     if(class(pca_plotdata[,c("class")]) == "factor" | 
     class(pca_plotdata[,c("class")]) == "character"){
     
-        pca_plot_fin <- pca_plot + scale_color_manual(values=my_colors)
+        pca_plot_fin <- pca_plot + scale_fill_manual(values=my_colors) + scale_color_manual(values=my_colors)
     
       }
     
