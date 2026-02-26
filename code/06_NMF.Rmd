@@ -351,6 +351,22 @@ h <- nmf_feats(norm.impute, rank = 3, meta.data, meta.col = "group", comp.found.
 save(h, comp.found.na.filter, file = "../data/biomarker_input/NMF_features_WITH_dupes.RData")
 ```
 
+# Calculate feature scores
+
+```{r}
+# calculate score (contribution of feature to basis)
+scores <- lapply(h, function(x) featureScore(t(x), method = "kim"))
+
+# graph distribution of scores
+lapply(scores, function(x) hist(x, breaks = 100))
+```
+
+## save list of feature scores for biomarker filtering
+
+```{r}
+save(scores, comp.found.na.filter, file = "../data/biomarker_input/NMF_feature_scores_WITH_dupes.RData")
+```
+
 # Run model X times to validate
 
 ```{r}
