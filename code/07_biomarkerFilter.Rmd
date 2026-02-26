@@ -11,10 +11,10 @@ knitr::opts_chunk$set(echo = TRUE)
 # Load data
 
 ```{r}
-load("./data/biomarker_input/anova_features_WITH_duplicates.RData")
-load("./data/biomarker_input/PCA_features_WITHduplicates.RData")
-load("./data/biomarker_input/NMF_features_WITH_dupes.RData")
-load("./data/biomarker_input/NMF_feature_scores_WITH_dupes.RData")
+load("../data/biomarker_input/anova_features_WITH_duplicates.RData")
+load("../data/biomarker_input/PCA_features_WITHduplicates.RData")
+load("../data/biomarker_input/NMF_features_WITH_dupes.RData")
+load("../data/biomarker_input/NMF_feature_scores_WITH_dupes.RData")
 ```
 
 # Load packages
@@ -237,7 +237,7 @@ nmf.filter <- function(data, comp){
 
 ```{r}
 # Load data for heatmap abundances
-load("./data/duplicate_input/imputed_data.RData")
+load("../data/duplicate_input/imputed_data.RData")
 
 # Unlist MFs to get master list
   mf.unlist <- sapply(nmf.feats, "[[", "MF")
@@ -356,7 +356,7 @@ plots.nmf.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data$gr
                                            names(nmf.scaled.data),
                                            SIMPLIFY = FALSE)
 
-pdf(file = "./outputs/heatmap_NMF_feats.pdf", width = 24, height = 16)
+pdf(file = "../outputs/heatmap_NMF_feats.pdf", width = 24, height = 16)
 
 grid.arrange(grobs = plots.nmf.all, ncol = 4)
 
@@ -401,7 +401,7 @@ plots.nmf.avg <- mapply(function(x,y,z) (pheatmap::pheatmap(t(x[order(meta.data.
                                            mf.names,
                                            SIMPLIFY = FALSE)
 
-pdf(file = "./outputs/heatmap_NMF_feats_averaged.pdf", width = 24, height = 16)
+pdf(file = "../outputs/heatmap_NMF_feats_averaged.pdf", width = 24, height = 16)
 
 grid.arrange(grobs = plots.nmf.avg, ncol = 4)
 
@@ -460,7 +460,7 @@ anova.feats <- lapply(anova.feat.filt, function(x) anova.filter(x, 0.05))
 
 ```{r}
 # Load data for heatmap abundances
-load("./data/duplicate_input/imputed_data.RData")
+load("../data/duplicate_input/imputed_data.RData")
 
 # Unlist MFs to get master list
   mf.unlist <- sapply(anova.feats, "[[", "MF")
@@ -546,7 +546,7 @@ plots.anova.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data$
                                            names(anova.scaled.data),
                                            SIMPLIFY = FALSE)
 
-pdf(file = "./outputs/heatmap_anova_feats.pdf", width = 24, height = 16)
+pdf(file = "../outputs/heatmap_anova_feats.pdf", width = 24, height = 16)
 
 grid.arrange(grobs = plots.anova.all, ncol = 6)
 
@@ -574,7 +574,7 @@ plots.anova.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data.
                                            names(anova.scaled.data.avg),
                                            SIMPLIFY = FALSE)
 
-pdf(file = "./outputs/heatmap_anova_feats_averaged.pdf",width = 24, height = 16)
+pdf(file = "../outputs/heatmap_anova_feats_averaged.pdf",width = 24, height = 16)
 
 grid.arrange(grobs = plots.anova.all, ncol = 6)
 
@@ -591,7 +591,7 @@ mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data.avg$group),]), clus
 ```{r}
 venn.diagram(list(names(nmf.scaled.data), names(anova.scaled.data)),
              category.names = c("NMF", "ANOVA"),
-             filename = "./outputs/NMFvANOVA_feats_venn.png", 
+             filename = "../outputs/NMFvANOVA_feats_venn.png", 
              output = TRUE)
 
 ```
