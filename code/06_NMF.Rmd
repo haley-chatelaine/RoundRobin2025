@@ -9,19 +9,7 @@ output: html_document
 # Load packages
 
 ```{r}
-#install.packages("NMF")
-#install.packages("RColorBrewer")
-#install.packages("ggplotify")
-
-library(NMF)
-library(RColorBrewer)
-library(pheatmap)
-library(factoextra)
-library(ggplot2)
-library(ggpubr)
-library(grid)
-library(gridExtra)
-library(ggplotify)
+source("../code/summary_functions.R")
 ```
 
 # Load data
