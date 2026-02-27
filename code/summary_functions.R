@@ -6,7 +6,7 @@ packages <- c("tidyverse", "dplyr", "effectsize", "BiocManager",
               "ggplot2", "ggpattern", "ggvenn", "tidyr", "UpSetR", "plotly", "devtools",
               "RColorBrewer", "ggsci", "ggpubr", "pheatmap", "grafify", "pheatmap", "ggplotify", "patchwork", "grid", "gridExtra",
               "openxlsx", "data.table", "factoextra", "htmltools", "colorspace",
-              "NMF", )
+              "NMF")
 
 installed_packages <- packages %in% rownames(installed.packages())
 if (any(installed_packages == FALSE)) {
