@@ -30,10 +30,14 @@ if (any(installed_packages == FALSE)) {
   install.packages(packages[!installed_packages])
 }
 
-invisible(lapply(packages, library, character.only = TRUE))
 
-#BiocManager::install("ComplexHeatmap")
-library(ComplexHeatmap)
+
+biocpackage <- "ComplexHeatmap"
+if((biocpackage %in% rownames(installed.packages())) == FALSE) {
+  BiocManager::install("ComplexHeatmap")
+}
+invisible(lapply(c(packages,biocpackage), library, character.only = TRUE))
+#library(ComplexHeatmap)
 ```
 
 # Only include M+H, M-H, M+e, or M-e features
