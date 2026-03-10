@@ -663,7 +663,7 @@ load("../data/reproducibility_input/duplicated_filtered_data.RData")
 overlap.feats <- overlap.metabs(comp.std, "retain.name")
 ```
 
-# Subset abundance data for features filtered based on: ANOVA
+# Subset abundance data for features filtered based on: overlaps
 
 ```{r}
 # Prep list
@@ -701,7 +701,7 @@ names(overlap.mf.list) <- overlap.feats
 
 ```
 
-# Remove peptides from the metabolites of interest: ANOVA
+# Remove peptides from the metabolites of interest: overlaps
 
 ```{r}
 # List MFs that correspond to putative peptide IDs
@@ -715,13 +715,13 @@ index <- which(names(overlap.mf.list) %in% peptide.mf)
 overlap.mf.list.nopep <- overlap.mf.list[-index]
 ```
 
-# Take the average abundance for each group: ANOVA
+# Take the average abundance for each group: overlaps
 
 ```{r}
 overlap.mf.avg <- lapply(overlap.mf.list, function(x) avg.abund(x, meta.data))
 ```
 
-# Make heatmaps of abundance data: ANOVA - all abundances
+# Make heatmaps of abundance data: overlaps - all abundances
 
 ```{r}
 overlap.scaled.data <- lapply(overlap.mf.list, function(y) apply(y, 1, function(x) log2(x/(mean(x)))))
@@ -749,7 +749,7 @@ mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data$group),]), cluster_
                                              show_colnames = F)), overlap.scaled.data, names(overlap.scaled.data))
 ```
 
-# Make heatmaps of abundance data: ANOVA - averaged abundances
+# Make heatmaps of abundance data: overlaps - averaged abundances
 
 ```{r}
 overlap.scaled.data.avg <- lapply(overlap.mf.avg, function(y) apply(y, 1, function(x) log2(x/(mean(x)))))
