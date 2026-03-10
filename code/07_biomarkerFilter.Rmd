@@ -37,7 +37,9 @@ if((biocpackage %in% rownames(installed.packages())) == FALSE) {
   BiocManager::install("ComplexHeatmap")
 }
 invisible(lapply(c(packages,biocpackage), library, character.only = TRUE))
-#library(ComplexHeatmap)
+library(ComplexHeatmap)
+
+source("../code/reproducibility_functions.R")
 ```
 
 # Only include M+H, M-H, M+e, or M-e features
@@ -112,7 +114,6 @@ for(lab in 1:length(scores)){
   
 }
 ```
-
 
 # New NMF features filter
 feature with highest score per MF & score in top 50%
@@ -399,6 +400,8 @@ plots.nmf.avg <- mapply(function(x,y,z) (pheatmap::pheatmap(t(x[order(meta.data.
                                              show_rownames = T,
                                              show_colnames = T,
                                              fontsize = 15,
+                                             fontsize_col = 20,
+                                             fontsize_row = 20,
                                              silent = TRUE)$gtable), 
                                            nmf.scaled.data.avg, 
                                            names(nmf.scaled.data.avg),
@@ -649,3 +652,127 @@ for(lab in 1:length(norm.group.load)){
 }
 ```
 
+
+# All overlapped features filter
+features with retained names in all 8 labs
+
+```{r}
+# Load data with retained name info
+load("../data/reproducibility_input/duplicated_filtered_data.RData")
+
+overlap.feats <- overlap.metabs(comp.std, "retain.name")
+```
+
+# Subset abundance data for features filtered based on: ANOVA
+
+```{r}
+# Prep list
+
+length(overlap.mf.list) <- length(overlap.feats)
+names(overlap.mf.list) <- overlap.feats
+
+
+# Add abundance data
+
+  for(feat in 1:length(overlap.feats)){
+      
+      # add empty data frame to list
+      
+      overlap.mf.list[[feat]] <- data.frame(matrix(nrow = 8, ncol = nrow(norm.std$Lab1)))
+      colnames(overlap.mf.list[[feat]]) <- row.names(norm.std$Lab1)
+      row.names(overlap.mf.list[[feat]]) <- names(norm.std)
+      
+      # add abundance data for the feature from the filtered feature list for each MF for each lab
+      
+      overlap.mf.list[[feat]][1,] <- norm.std$Lab1[,which(comp.std$Lab1$retain.name == overlap.feats[feat])]
+      overlap.mf.list[[feat]][2,] <- norm.std$Lab2[,which(comp.std$Lab2$retain.name == overlap.feats[feat])]
+      overlap.mf.list[[feat]][3,] <- norm.std$Lab3[,which(comp.std$Lab3$retain.name == overlap.feats[feat])]
+      overlap.mf.list[[feat]][4,] <- norm.std$Lab4[,which(comp.std$Lab4$retain.name == overlap.feats[feat])]
+      overlap.mf.list[[feat]][5,] <- norm.std$Lab5[,which(comp.std$Lab5$retain.name == overlap.feats[feat])]
+      overlap.mf.list[[feat]][6,] <- norm.std$Lab6[,which(comp.std$Lab6$retain.name == overlap.feats[feat])]
+      overlap.mf.list[[feat]][7,] <- norm.std$Lab7[,which(comp.std$Lab7$retain.name == overlap.feats[feat])]
+      overlap.mf.list[[feat]][8,] <- norm.std$Lab8[,which(comp.std$Lab8$retain.name == overlap.feats[feat])]
+      
+  }
+
+# Remove NULLs
+  
+  overlap.mf.list <- overlap.mf.list[!sapply(overlap.mf.list, is.null)]
+
+```
+
+# Remove peptides from the metabolites of interest: ANOVA
+
+```{r}
+# List MFs that correspond to putative peptide IDs
+
+peptide.mf <- c("C10H16N2O4", "C10H18N2O5", "C10H19N3O4", "C10H20N2O3", "C11H20N2O3", "C11H20N2O5", "C11H22N2O3", "C11H23N5O3", "C12H16N2O3", "C12H25N3O3", "C13H18N2O4", "C13H23N3O4", "C14H20N2O3", "C14H20N2O4", "C15H22N2O3", "C15H22N2O4", "C16H21N3O3", "C8H14N2O4", "C8H16N2O3", "C9H17N3O4", "C9H17N3O4", "C9H18N2O3", "C9H18N2O4", "C17H31N3O4", "C16H29N3O4")
+
+# Remove peptides
+
+index <- which(names(overlap.mf.list) %in% peptide.mf)  
+  
+overlap.mf.list.nopep <- overlap.mf.list[-index]
+```
+
+# Take the average abundance for each group: ANOVA
+
+```{r}
+overlap.mf.avg <- lapply(overlap.mf.list, function(x) avg.abund(x, meta.data))
+```
+
+# Make heatmaps of abundance data: ANOVA - all abundances
+
+```{r}
+overlap.scaled.data <- lapply(overlap.mf.list, function(y) apply(y, 1, function(x) log2(x/(mean(x)))))
+
+colors <- colorRampPalette(c("white", "lightblue", "darkblue"))(50)
+
+plots.overlap.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data$group),]), cluster_rows = F, cluster_cols = F, main = y, 
+                                             color = colors,
+                                             show_rownames = T,
+                                             show_colnames = T,
+                                             silent = TRUE)$gtable), 
+                                           overlap.scaled.data, 
+                                           names(overlap.scaled.data),
+                                           SIMPLIFY = FALSE)
+
+pdf(file = "../outputs/heatmap_overlap_feats.pdf", width = 24, height = 16)
+
+grid.arrange(grobs = plots.overlap.all, ncol = 6)
+
+dev.off()
+
+mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data$group),]), cluster_rows = F, cluster_cols = F, main = y, 
+                                             color = colors,
+                                             show_rownames = F,
+                                             show_colnames = F)), overlap.scaled.data, names(overlap.scaled.data))
+```
+
+# Make heatmaps of abundance data: ANOVA - averaged abundances
+
+```{r}
+overlap.scaled.data.avg <- lapply(overlap.mf.avg, function(y) apply(y, 1, function(x) log2(x/(mean(x)))))
+
+colors <- colorRampPalette(c("white", "lightblue", "darkblue"))(50)
+
+plots.overlap.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data.avg$group),]), cluster_rows = F, cluster_cols = F, main = y, 
+                                             color = colors,
+                                             show_rownames = T,
+                                             show_colnames = T,
+                                             silent = TRUE)$gtable), 
+                                           overlap.scaled.data.avg, 
+                                           names(overlap.scaled.data.avg),
+                                           SIMPLIFY = FALSE)
+
+pdf(file = "../outputs/heatmap_overlap_feats_averaged.pdf",width = 24, height = 16)
+
+grid.arrange(grobs = plots.overlap.all, ncol = 6)
+
+dev.off()
+
+mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data.avg$group),]), cluster_rows = F, cluster_cols = F, main = y, 
+                                             color = colors,
+                                             show_rownames = F,
+                                             show_colnames = F)), anova.scaled.data.avg, names(anova.scaled.data.avg))
+```
