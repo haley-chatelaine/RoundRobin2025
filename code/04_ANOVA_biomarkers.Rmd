@@ -48,9 +48,7 @@ rr.anova <- function(data, meta.data, variable, comp.data){
               
   for(i in 1:length(data)){
     
-    results[[i]] <- data.frame("feature" = row.names(comp.data[[i]]), "pvalue" = apply(data[[i]], 2, function(x) metab.anova(x, "group")))
-    
-    #names(results[[i]]) <- colnames(data[[i]])
+    results[[i]] <- data.frame("feature" = row.names(comp.data[[i]]), "MF" = comp.data[[i]]$MF, "pvalue" = apply(data[[i]], 2, function(x) metab.anova(x, "group")))
     
   }
   
