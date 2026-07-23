@@ -409,7 +409,7 @@ lab.cor <- function(results.list, cortype){
 
 heat.cor <- function(labcor.results, comp.class = NULL, order.by.class = FALSE, 
                      show.colnames = FALSE, show.rownames = TRUE, legend = TRUE,
-                     show.negatives = TRUE){
+                     show.negatives = TRUE, fontsize = 15){
   # labcor.results = results from finding pairwise correlations of features between labs
   # comp.class = metabolite metadata with chemical classes mapped
   # order.by.class = logical stating whether to use chemical class to order the rows (as opposed to hierarchical clustering)
@@ -502,7 +502,7 @@ heat.cor <- function(labcor.results, comp.class = NULL, order.by.class = FALSE,
                            show_rownames = show.rownames,
                            annotation_row = row.annot,
                            legend = legend,
-                           fontsize = 15
+                           fontsize = fontsize
                            ))
        
     }
@@ -517,7 +517,7 @@ heat.cor <- function(labcor.results, comp.class = NULL, order.by.class = FALSE,
                          show_colnames = show.colnames,
                          show_rownames = show.rownames,
                          legend = legend,
-                         fontsize = 15))
+                         fontsize = fontsize))
         
   }    
       

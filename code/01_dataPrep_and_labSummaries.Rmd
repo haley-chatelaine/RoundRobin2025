@@ -11,18 +11,19 @@ This code takes the CF preprocessed data from all labs and computes summary metr
 
 ```{r setup, echo = FALSE, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code")
 ```
 
 # Load functions and packages
 
 ```{r, message=FALSE}
-source("../code/summary_functions.R")
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/summary_functions.R")
 ```
 
 # Load lab data and compounds found
 
 ```{r}
-path <- "../data/original_input"
+path <- "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/original_input"
 
 lab.names <- list.files(path = path, "Lab", full.names = T, recursive = F)
 
@@ -42,6 +43,14 @@ raw.results <- read.results(path = path, file.text = "_Norm", sheet.text = "C12-
 
 ratio.results <- read.results(path = path, file.text = "_Norm", sheet.text = "Ratio")
 
+# C13 data
+
+c13.results <- read.results(path = path, file.text = "_Norm", sheet.text = "C13-MSTUS")
+
+# Raw mstus-filtered
+
+raw.mstus <- read.results(path = path, file.text = "_Norm", sheet.text = "C12-MSTUS")
+
 # Compounds found
 
 comp.found <- read.results(path = path, file.text = "_Norm", sheet.text = "Cmpds")
@@ -54,7 +63,7 @@ comp.found <- read.results(path = path, file.text = "_Norm", sheet.text = "Cmpds
 
 ## read in map of sample numbers to descriptive names
 
-master.map <- read.csv("../data/original_input/sample_description_map.csv", header = T)
+master.map <- read.csv("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/original_input/sample_description_map.csv", header = T)
 
 norm.results <- map.samples(path, "_Norm", "Design", master.map, norm.results)
 sc.results <- map.samples(path, "_Norm", "Design", master.map, sc.results)
@@ -71,6 +80,18 @@ norm.named <- map.metabs(comp.found, norm.results, "Name")
 sc.named <- map.metabs(comp.found, sc.results, "Name")
 raw.named <- map.metabs(comp.found, raw.results, "Name")
 ratio.named <- map.metabs(comp.found, ratio.results, "Name")
+```
+
+# Calculate CVs of C12 and C13 raw values
+
+```{r}
+c13.cvs <- lapply(c13.results, calc.cv)
+lapply(c13.cvs, mean)
+lapply(c13.cvs, sd)
+
+c12.cvs <- lapply(raw.mstus, calc.cv)
+lapply(c12.cvs, mean)
+lapply(c12.cvs, sd)
 ```
 
 # Change 1s to 0s so counted as missing values
@@ -130,15 +151,13 @@ ratio.impute <- impute.halfmin(ratio.na.filter)
 # Apply MSTUS to raw data for comparison with normalized/sc data
 
 ```{r}
-mstus.impute <- lapply(raw.impute, function (x) mstus(x, low.boun = 0.2, high.bound = 0.95))
-   
-# check with Chris's MSTUS method   
+mstus.impute <- lapply(raw.impute, function (x) chris.mstus(x, low.boun = 0.2, high.bound = 0.95))
 ```
 
 # Save filtered and imputed data as RData for other analyses
 
 ```{r}
-save(norm.impute, sc.impute, raw.impute, ratio.impute, mstus.impute, comp.found.na.filter, meta.data, file = "../data/duplicate_input/imputed_data.RData")
+save(norm.impute, sc.impute, raw.impute, ratio.impute, mstus.impute, comp.found.na.filter, meta.data, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
 ```
 
 # Create a table of numbers and types of annotated bins found for each lab
@@ -159,7 +178,7 @@ sc.int <- intensity.box(sc.impute, "suppression-corrected")
 raw.int <- intensity.box(raw.impute, "IROA raw")
 
 int.arrange <- ggarrange(raw.int, sc.int, norm.int, ncol = 3, nrow = 1, common.legend = T)
-ggsave("../outputs/total_intensity_boxplots.png", width = 30, height = 10)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/total_intensity_boxplots.png", width = 30, height = 10)
 ```
 
 # Plot distribution of sample pair correlations 
@@ -169,6 +188,12 @@ ggsave("../outputs/total_intensity_boxplots.png", width = 30, height = 10)
 norm.cor <- cor.dupes(norm.impute)
 sc.cor <- cor.dupes(sc.impute)
 raw.cor <- cor.dupes(raw.impute)
+
+# report means and sds
+cor.stats <- lapply(norm.cor, function(x) paste(round(mean(x$correlation), 2),
+                                   "+/-",
+                                   round(sd(x$correlation), 2)))
+do.call(rbind, cor.stats)
 ```
 
 ## Calculate correlations of random pairs
@@ -224,7 +249,7 @@ colnames(norm.combo.melt) <- c("Lab", "Correlation", "Pair Type")
             text = element_text(size = 15)) + 
       ggtitle("Sample Correlations in True Duplicates and Random Pairs") 
     
-ggsave("../outputs/boxplots_duplicate_correlations.png", width = 6, height = 4, dpi = 600)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/boxplots_duplicate_correlations.png", width = 6, height = 4, dpi = 600)
 
 
 # SC
@@ -333,4 +358,54 @@ attach(lab3.bc)
 plot(bc_0.5_rep1, bc_0.5_rep2)
 text(bc_0.5_rep1, bc_0.5_rep2, row.names(lab3.bc), cex = 0.7)
  
+```
+
+# Euclidean distance of sample pairs
+
+```{r}
+euc.data <- lapply(norm.impute, euclid.func)
+
+# heatmaps
+#euc.plots <- mapply(function(x, y) euclid.func(x, y), norm.impute, names(norm.impute))
+#ggarrange(plotlist = euc.plots, nrow = 2, ncol = 4)
+
+# boxplots
+euclid.box(euc.data, meta.data)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/boxplots_euclidean_distances.png", width = 16, height = 12, dpi = 600)
+
+# summary stats
+    # Mark true duplicates
+     mark.dup <- function(dist.long){
+       # dist.long = dist data for one lab
+       
+       dist.long$dup <- NA
+        for(row in 1:nrow(dist.long)){
+          
+          samp1 <- gsub("_rep.*", "", dist.long$Sample1[row])
+          samp2 <- gsub("_rep.*", "", dist.long$Sample2[row])
+          
+          if(samp1 == samp2){
+            
+            dist.long$dup[row] <- "X"  
+          
+          }
+        }
+       return(dist.long)
+     }
+    
+     euc.data <- lapply(euc.data, mark.dup)
+
+# mean true duplicate distances
+dup <- lapply(euc.data, function(x) x[which(x$dup == "X" &
+                                              x$value != 0 &
+                                              !is.na(x$value)),])
+
+dup.dist <- do.call(rbind, lapply(dup, function(x) mean(x$value, na.rm = T)))
+
+nondup <- lapply(euc.data, function(x) x[which(is.na(x$dup) &
+                                              x$value != 0 &
+                                              !is.na(x$value)),])
+nondup.dist <- do.call(rbind, lapply(nondup, function(x) mean(x$value, na.rm = T)))
+
+rel.dist <- dup.dist / nondup.dist
 ```

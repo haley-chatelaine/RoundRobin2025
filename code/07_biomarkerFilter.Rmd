@@ -11,16 +11,16 @@ knitr::opts_chunk$set(echo = TRUE)
 # Load data
 
 ```{r}
-load("../data/biomarker_input/anova_features_WITH_duplicates.RData")
-load("../data/biomarker_input/PCA_features_WITHduplicates.RData")
-load("../data/biomarker_input/NMF_features_WITH_dupes.RData")
-load("../data/biomarker_input/NMF_feature_scores_WITH_dupes.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/anova_features_WITH_duplicates.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/PCA_features_WITHduplicates.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_features_WITH_dupes.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_feature_scores_WITH_dupes.RData")
 ```
 
 # Load packages
 
 ```{r}
-packages <- c("tidyverse", "dplyr", "ggplot2", "ggpattern", "plotly", 
+packages <- c("tidyverse", "dplyr", "ggplot2", "ggpattern", "plotly", "purrr",
               "RColorBrewer", "ggsci", "ggpubr", "pheatmap", "grafify", "patchwork",
               "openxlsx", "data.table", "grafify", "factoextra", "htmltools", "colorspace",
               "VennDiagram", "gridExtra")
@@ -30,16 +30,12 @@ if (any(installed_packages == FALSE)) {
   install.packages(packages[!installed_packages])
 }
 
+invisible(lapply(packages, library, character.only = TRUE))
 
-
-biocpackage <- "ComplexHeatmap"
-if((biocpackage %in% rownames(installed.packages())) == FALSE) {
-  BiocManager::install("ComplexHeatmap")
-}
-invisible(lapply(c(packages,biocpackage), library, character.only = TRUE))
+#BiocManager::install("ComplexHeatmap")
 library(ComplexHeatmap)
 
-source("../code/reproducibility_functions.R")
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/reproducibility_functions.R")
 ```
 
 # Only include M+H, M-H, M+e, or M-e features
@@ -242,7 +238,7 @@ nmf.filter <- function(data, comp){
 
 ```{r}
 # Load data for heatmap abundances
-load("../data/duplicate_input/imputed_data.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
 
 # Unlist MFs to get master list
   mf.unlist <- sapply(nmf.feats, "[[", "MF")
@@ -361,7 +357,7 @@ plots.nmf.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data$gr
                                            names(nmf.scaled.data),
                                            SIMPLIFY = FALSE)
 
-pdf(file = "../outputs/heatmap_NMF_feats.pdf", width = 24, height = 16)
+pdf(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/heatmap_NMF_feats.pdf", width = 24, height = 16)
 
 grid.arrange(grobs = plots.nmf.all, ncol = 4)
 
@@ -408,7 +404,7 @@ plots.nmf.avg <- mapply(function(x,y,z) (pheatmap::pheatmap(t(x[order(meta.data.
                                            mf.names,
                                            SIMPLIFY = FALSE)
 
-pdf(file = "../outputs/heatmap_NMF_feats_averaged.pdf", width = 24, height = 16)
+pdf(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/heatmap_NMF_feats_averaged.pdf", width = 24, height = 16)
 
 grid.arrange(grobs = plots.nmf.avg, ncol = 4)
 
@@ -422,6 +418,72 @@ mapply(function(x,y,z) (pheatmap::pheatmap(t(x[order(meta.data.avg$group),]), cl
        names(nmf.scaled.data.avg),
        mf.names)
 ```
+
+# Make heatmaps of abundance data: NMF - averaged abundances - same color scale for all metabolites
+
+```{r}
+nmf.scaled.data.avg <- lapply(nmf.mf.avg, function(y) apply(y, 1, function(x) log2(x/(mean(x)))))
+
+# get putative names for MFs
+mf.names <- gsub(" .*", "", comp.found.na.filter$Lab1$Name[which(comp.found.na.filter$Lab1$MF %in% names(nmf.scaled.data.avg))])
+
+names(mf.names) <- comp.found.na.filter$Lab1$MF[which(comp.found.na.filter$Lab1$MF %in% names(nmf.scaled.data.avg))]
+
+mf.names <- mf.names[which(duplicated(names(mf.names)) == F)]
+
+  ## fix that long one
+
+mf.names[c("C16H29N3O4")] <- "CHEBI:118698"
+
+# set colors
+colors <- colorRampPalette(c("white", "lightblue", "darkblue"))(50)
+
+# wrangle data so all in one dataframe
+
+long_list <- lapply(names(nmf.scaled.data.avg), function(metabolite_name) {
+  df <- nmf.scaled.data.avg[[metabolite_name]]
+  data.frame(
+    value = as.vector(as.matrix(df)),
+    lab = rep(colnames(df), each = nrow(df)),
+    sample_group = rep(rownames(df), times = ncol(df)),
+    metabolite = metabolite_name
+  )
+})
+
+long_df <- do.call(rbind, long_list)
+
+# Plot heatmap using ggplot
+
+sample_group_order <- c("a", "b", "c", "ab", "ac", "bc", "abc")
+
+long_df$sample_group <- factor(long_df$sample_group, levels = sample_group_order)
+
+facet_labels <- paste0(names(mf.names), " - ", mf.names)
+names(facet_labels) <- names(mf.names)
+
+ggplot(long_df, aes(x = sample_group, y = lab, fill = value)) +
+  geom_tile(color = "white", linewidth = 0.3) +
+  facet_wrap(~ metabolite, scales = "free", labeller = labeller(metabolite = facet_labels)) +
+  scale_fill_gradientn(colors = colors, 
+                       name = "Scaled Abundance",
+                       breaks = scales::breaks_pretty(n = 5)) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    axis.text.y = element_text(size = 10),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    strip.text = element_text(face = "bold", size = 10),
+    panel.grid = element_blank(),
+    legend.position = c(0.85, 0.1),      # place legend in the empty panel area
+    legend.justification = c(0, 0),
+    legend.background = element_rect(fill = "white", color = NA)
+  ) +
+  labs(x = "Sample Group", y = "Lab")
+
+ggsave(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/heatmap_NMF_feats_averaged_colorScaled.pdf", width = 16, height = 9)
+```
+
 
 # ANOVA features filter
 feature with lowest p-value for a given MF
@@ -447,6 +509,7 @@ anova.filter <- function(data, p.cutoff = 0.05){
     ## find the lowest p-value
     
     for(mf in 1:length(mfs)){
+      print(mf)
       
       feats <- data.filter[which(data.filter$MF == mfs[mf]),]
         
@@ -467,7 +530,7 @@ anova.feats <- lapply(anova.feat.filt, function(x) anova.filter(x, 0.05))
 
 ```{r}
 # Load data for heatmap abundances
-load("../data/duplicate_input/imputed_data.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
 
 # Unlist MFs to get master list
   mf.unlist <- sapply(anova.feats, "[[", "MF")
@@ -553,7 +616,7 @@ plots.anova.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data$
                                            names(anova.scaled.data),
                                            SIMPLIFY = FALSE)
 
-pdf(file = "../outputs/heatmap_anova_feats.pdf", width = 24, height = 16)
+pdf(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/heatmap_anova_feats.pdf", width = 24, height = 16)
 
 grid.arrange(grobs = plots.anova.all, ncol = 6)
 
@@ -581,7 +644,7 @@ plots.anova.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data.
                                            names(anova.scaled.data.avg),
                                            SIMPLIFY = FALSE)
 
-pdf(file = "../outputs/heatmap_anova_feats_averaged.pdf",width = 24, height = 16)
+pdf(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/heatmap_anova_feats_averaged.pdf",width = 24, height = 16)
 
 grid.arrange(grobs = plots.anova.all, ncol = 6)
 
@@ -598,7 +661,7 @@ mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data.avg$group),]), clus
 ```{r}
 venn.diagram(list(names(nmf.scaled.data), names(anova.scaled.data)),
              category.names = c("NMF", "ANOVA"),
-             filename = "../outputs/NMFvANOVA_feats_venn.png", 
+             filename = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMFvANOVA_feats_venn.png", 
              output = TRUE)
 
 ```
@@ -658,12 +721,12 @@ features with retained names in all 8 labs
 
 ```{r}
 # Load data with retained name info
-load("../data/reproducibility_input/duplicated_filtered_data.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/reproducibility_input/duplicated_filtered_data.RData")
 
 overlap.feats <- overlap.metabs(comp.std, "retain.name")
 ```
 
-# Subset abundance data for features filtered based on: overlaps
+# Subset abundance data for features filtered based on: ANOVA
 
 ```{r}
 # Prep list
@@ -701,7 +764,7 @@ names(overlap.mf.list) <- overlap.feats
 
 ```
 
-# Remove peptides from the metabolites of interest: overlaps
+# Remove peptides from the metabolites of interest: ANOVA
 
 ```{r}
 # List MFs that correspond to putative peptide IDs
@@ -715,13 +778,13 @@ index <- which(names(overlap.mf.list) %in% peptide.mf)
 overlap.mf.list.nopep <- overlap.mf.list[-index]
 ```
 
-# Take the average abundance for each group: overlaps
+# Take the average abundance for each group: ANOVA
 
 ```{r}
 overlap.mf.avg <- lapply(overlap.mf.list, function(x) avg.abund(x, meta.data))
 ```
 
-# Make heatmaps of abundance data: overlaps - all abundances
+# Make heatmaps of abundance data: ANOVA - all abundances
 
 ```{r}
 overlap.scaled.data <- lapply(overlap.mf.list, function(y) apply(y, 1, function(x) log2(x/(mean(x)))))
@@ -737,7 +800,7 @@ plots.overlap.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.dat
                                            names(overlap.scaled.data),
                                            SIMPLIFY = FALSE)
 
-pdf(file = "../outputs/heatmap_overlap_feats.pdf", width = 24, height = 16)
+pdf(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/heatmap_overlap_feats.pdf", width = 24, height = 16)
 
 grid.arrange(grobs = plots.overlap.all, ncol = 6)
 
@@ -749,7 +812,7 @@ mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data$group),]), cluster_
                                              show_colnames = F)), overlap.scaled.data, names(overlap.scaled.data))
 ```
 
-# Make heatmaps of abundance data: overlaps - averaged abundances
+# Make heatmaps of abundance data: ANOVA - averaged abundances
 
 ```{r}
 overlap.scaled.data.avg <- lapply(overlap.mf.avg, function(y) apply(y, 1, function(x) log2(x/(mean(x)))))
@@ -765,7 +828,7 @@ plots.overlap.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.dat
                                            names(overlap.scaled.data.avg),
                                            SIMPLIFY = FALSE)
 
-pdf(file = "../outputs/heatmap_overlap_feats_averaged.pdf",width = 24, height = 16)
+pdf(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/heatmap_overlap_feats_averaged.pdf",width = 24, height = 16)
 
 grid.arrange(grobs = plots.overlap.all, ncol = 6)
 

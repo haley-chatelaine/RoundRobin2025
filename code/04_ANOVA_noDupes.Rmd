@@ -16,9 +16,9 @@ Run ANOVA on all filtered and prepared data sets (normalized and ratio) and extr
 # Load data
 
 ```{r}
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/reproducibility_input/duplicated_filtered_data.RData")
 
-norm.log <- lapply(norm.impute, log2)
+norm.log <- lapply(norm.std, log2)
 ```
 
 # Function for ANOVA 
@@ -48,7 +48,9 @@ rr.anova <- function(data, meta.data, variable, comp.data){
               
   for(i in 1:length(data)){
     
-    results[[i]] <- data.frame("feature" = row.names(comp.data[[i]]), "MF" = comp.data[[i]]$MF, "pvalue" = apply(data[[i]], 2, function(x) metab.anova(x, "group")))
+    results[[i]] <- data.frame("pvalue" = apply(data[[i]], 2, function(x) metab.anova(x, "group")))
+    
+    #names(results[[i]]) <- colnames(data[[i]])
     
   }
   
@@ -62,7 +64,7 @@ rr.anova <- function(data, meta.data, variable, comp.data){
 # Run ANOVA and adjust p-values
 
 ```{r}
-anova.results <- rr.anova(norm.log, meta.data, "group", comp.found.na.filter)
+anova.results <- rr.anova(norm.log, meta.data, "group", comp.std)
 
 for(i in 1:length(anova.results)){
   
@@ -76,5 +78,5 @@ for(i in 1:length(anova.results)){
 # Save results for filtering in biomarker rmd
 
 ```{r}
-save(anova.results, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/anova_features_WITH_duplicates.RData")
+save(anova.results, comp.std, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/anova_features_NO_duplicates.RData")
 ```

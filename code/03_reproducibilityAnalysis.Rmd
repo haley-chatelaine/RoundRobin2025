@@ -26,9 +26,9 @@ Input file structure:
   "path/Results/[* Norm/SC/Raw *.xlsx]"
   
 ```{r}
-source("../code/plotting_functions.R")
-source("../code/reproducibility_functions.R")
-source("../code/summary_functions.R")
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/plotting_functions.R")
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/reproducibility_functions.R")
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/summary_functions.R")
 
 library(devtools)
 #install_github("jokergoo/InteractiveComplexHeatmap")
@@ -38,14 +38,21 @@ library(devtools)
 # Load data
 
 ```{r}
-load("../data/reproducibility_input/duplicated_filtered_data.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/reproducibility_input/duplicated_filtered_data.RData")
 ```
 
 # Determine ClassyFire super class of metabolites using RaMP-DB 2.0 (for use in heatmap annotations)
 
 ```{r}
 # Load RaMP-DB
+if (!requireNamespace("ncats/RAMP-DB", quietly = TRUE)) {
+  library(devtools)
+  #install_github("ncats/RAMP-DB")
+  pak::pak("ncats/RaMP-DB")
 
+}
+
+invisible(lapply(packages, library, character.only = TRUE))
 library(RaMP)
 library(DT) 
 library(dplyr)
@@ -108,7 +115,7 @@ while(length(class_factor)>0){
 
 # plot
 
-pdf("../outputs/final_metabs_upset_retainname.pdf",width = 32,height = 16,fonts = "serif")
+pdf("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/final_metabs_upset_retainname.pdf",width = 32,height = 16,fonts = "serif")
 class_upset <- upset(upset.metabs, 
                     queries = mylist,
                     nsets = length(comp.class),
@@ -151,7 +158,33 @@ class_bar <- ggplot(data = metab.bar, aes(x = reorder(class, count), fill = clas
 
 class_bar
 
-ggsave("../outputs/total_classes.png", width = 6, height = 4)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/total_classes.png", width = 6, height = 4)
+```
+
+# Calculate pairwise correlations of RATIO data for metabolites that overlap (by name) across all labs using any match type WITH lab 2
+
+```{r}
+# Subset metabs to use
+ratio.30.subset <- lapply(ratio.std, function(x) x[,which(colnames(x) %in% retain.name.results.overlap)])
+metabs.30 <- colnames(ratio.subset.30$Lab1)
+
+# log transform
+ratio.30.subset.log <- lapply(ratio.30.subset, log2)
+
+# correlation
+ratio.30.subset.cor <- lab.cor(ratio.30.subset.log, "pearson")
+ratio.30.subset.cor <- ratio.30.subset.cor[order(row.names(ratio.30.subset.cor)),]
+
+# heatmap
+png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_30_alltypes_ratio_withLab2.png", width = 3, height = 8, units = "in", res = 300)
+heat.cor(ratio.30.subset.cor, show.colnames = T, show.rownames = F, show.negatives = F)
+
+# summary
+ratio.30.subset.mean <- mean(unlist(ratio.30.subset.cor), na.rm = T)
+n <- length(ratio.30.subset.cor)
+std.dev.ratio.30.subset <- sd(unlist(ratio.30.subset.cor), na.rm = T)
+
+print(paste("The correlations in the standard-subset (all match types) ratio data have a mean of", round(ratio.30.subset.mean, 2), "and standard deviation of", round(std.dev.ratio.30.subset, 2)))
 ```
 
 # Calculate pairwise correlations of RATIO data for metabolites that have standard data in 3+ labs using any match type WITH lab 2
@@ -170,8 +203,8 @@ ratio.std.subset.cor <- lab.cor(ratio.std.subset.log, "pearson")
 ratio.std.subset.cor <- ratio.std.subset.cor[order(row.names(ratio.std.subset.cor)),]
 
 # heatmap
-png(file = "../outputs/correlation_heatmap_stds_alltypes_ratio_withLab2.png", width = 8, height = 8, units = "in", res = 300)
-heat.cor(ratio.std.subset.cor, show.colnames = T, show.rownames = T, show.negatives = F)
+png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_ratio_withLab2.png", width = 3, height = 8, units = "in", res = 300)
+heat.cor(ratio.std.subset.cor, show.colnames = T, show.rownames = F, show.negatives = F)
 
 # summary
 ratio.std.subset.mean <- mean(unlist(ratio.std.subset.cor), na.rm = T)
@@ -197,7 +230,7 @@ norm.std.subset.cor <- lab.cor(norm.std.subset.log, "pearson")
 norm.std.subset.cor <- norm.std.subset.cor[order(row.names(norm.std.subset.cor)),]
 
 # heatmap
-png(file = "../outputs/correlation_heatmap_stds_alltypes_norm_withLab2.png", width = 8, height = 8, units = "in", res = 300)
+png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_norm_withLab2.png", width = 4, height = 8, units = "in", res = 300)
 heat.cor(norm.std.subset.cor, show.colnames = T, show.rownames = T, show.negatives = F)
 
 # summary
@@ -224,8 +257,8 @@ mstus.std.subset.cor <- lab.cor(mstus.std.subset.log, "pearson")
 mstus.std.subset.cor <- mstus.std.subset.cor[order(row.names(mstus.std.subset.cor)),]
 
 # heatmap
-png(file = "../outputs/correlation_heatmap_stds_alltypes_mstus_withLab2.png", width = 8, height = 8, units = "in", res = 300)
-heat.cor(mstus.std.subset.cor, show.colnames = T, show.rownames = T, show.negatives = F)
+png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_mstus_withLab2.png", width = 3, height = 8, units = "in", res = 300)
+heat.cor(mstus.std.subset.cor, show.colnames = T, show.rownames = F, show.negatives = F)
 
 # summary
 mstus.std.subset.mean <- mean(unlist(mstus.std.subset.cor), na.rm = T)
@@ -251,8 +284,8 @@ raw.std.subset.cor <- lab.cor(raw.std.subset.log, "pearson")
 raw.std.subset.cor <- raw.std.subset.cor[order(row.names(raw.std.subset.cor)),]
 
 # heatmap
-png(file = "../outputs/correlation_heatmap_stds_alltypes_raw_withLab2.png", width = 8, height = 8, units = "in", res = 300)
-heat.cor(raw.std.subset.cor, show.colnames = T, show.rownames = T, show.negatives = F)
+png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_raw_withLab2.png", width = 3, height = 8, units = "in", res = 300)
+heat.cor(raw.std.subset.cor, show.colnames = T, show.rownames = F, show.negatives = F)
 
 # summary
 raw.std.subset.mean <- mean(unlist(raw.std.subset.cor), na.rm = T)
@@ -279,8 +312,8 @@ ratio.std.subset.no2.log <- lapply(ratio.std.subset.no2, log2)
 ratio.std.subset.no2.cor <- lab.cor(ratio.std.subset.no2.log, "pearson")
 
 # heatmap
-png(file = "../outputs/correlation_heatmap_stds_alltypes_ratio.png", width = 8, height = 6, units = "in", res = 300)
-heat.cor(ratio.std.subset.no2.cor, show.colnames = T, show.rownames = T, show.negatives = F)
+png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_ratio.png", width = 3, height = 8, units = "in", res = 300)
+heat.cor(ratio.std.subset.no2.cor, show.colnames = T, show.rownames = F, show.negatives = F)
 
 ratio.std.heat.no2 <- heat.cor(ratio.std.subset.no2.cor, show.colnames = T, show.rownames = F, legend = F, show.negatives = F)
 
@@ -308,8 +341,8 @@ norm.std.subset.no2.log <- lapply(norm.std.subset.no2, log2)
 norm.std.subset.no2.cor <- lab.cor(norm.std.subset.no2.log, "pearson")
 
 # heatmap
-png(file = "../outputs/correlation_heatmap_stds_alltypes_norm.png", width = 8, height = 6, units = "in", res = 300)
-heat.cor(norm.std.subset.no2.cor, show.colnames = T)
+png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_norm.png", width = 4, height = 8, units = "in", res = 300)
+heat.cor(norm.std.subset.no2.cor, show.rownames = T, show.colnames = T, show.negatives = F)
 
 norm.std.heat.no2 <- heat.cor(norm.std.subset.no2.cor, show.colnames = T, show.negatives = F)
 
@@ -337,8 +370,8 @@ mstus.std.subset.no2.log <- lapply(mstus.std.subset.no2, log2)
 mstus.std.subset.no2.cor <- lab.cor(mstus.std.subset.no2.log, "pearson")
 
 # heatmap
-png(file = "../outputs/correlation_heatmap_stds_alltypes_mstus.png", width = 8, height = 6, units = "in", res = 300)
-heat.cor(mstus.std.subset.no2.cor, show.colnames = T)
+png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_mstus.png", width = 2.5, height = 8, units = "in", res = 300)
+heat.cor(mstus.std.subset.no2.cor, show.colnames = T, show.rownames = F, show.negatives = F)
 
 mstus.std.heat.no2 <- heat.cor(mstus.std.subset.no2.cor, show.colnames = T, show.rownames = F, legend = F, show.negatives = F)
 
@@ -366,8 +399,8 @@ sc.std.subset.no2.log <- lapply(sc.std.subset.no2, log2)
 sc.std.subset.no2.cor <- lab.cor(sc.std.subset.no2.log, "pearson")
 
 # heatmap
-png(file = "../outputs/correlation_heatmap_stds_alltypes_sc.png", width = 8, height = 6, units = "in", res = 300)
-heat.cor(sc.std.subset.no2.cor, show.colnames = T)
+png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_sc.png", width = 3, height = 8, units = "in", res = 300)
+heat.cor(sc.std.subset.no2.cor, show.rownames = F, show.colnames = T, show.negatives = F)
 
 sc.std.heat.no2 <- heat.cor(sc.std.subset.no2.cor, show.colnames = T, show.rownames = F, legend = F, show.negatives = F)
 
@@ -395,8 +428,8 @@ raw.std.subset.no2.log <- lapply(raw.std.subset.no2, log2)
 raw.std.subset.no2.cor <- lab.cor(raw.std.subset.no2.log, "pearson")
 
 # heatmap
-png(file = "../outputs/correlation_heatmap_stds_alltypes_raw.png", width = 8, height = 6, units = "in", res = 300)
-heat.cor(raw.std.subset.no2.cor, show.colnames = T)
+png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_raw.png", width = 2.5, height = 8, units = "in", res = 300)
+heat.cor(raw.std.subset.no2.cor, show.rownames = F, show.colnames = T, show.negatives = F)
 
 raw.std.heat.no2 <- heat.cor(raw.std.subset.no2.cor, show.colnames = T, show.rownames = F, legend = F, show.negatives = F)
 
@@ -431,27 +464,27 @@ norm.cor.heat <- heat.cor(norm.pearson)
 
 violin.norm <- violin.cor(norm.pearson, "normalized")
 violin.norm
-#ggsave("../outputs/violin_norm_feature_correlations.png", width = 6, height = 4, dpi = 600)
+#ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/violin_norm_feature_correlations.png", width = 6, height = 4, dpi = 600)
 
 violin.ratio <- violin.cor(ratio.pearson, "ratio")
 violin.ratio
-#ggsave("../outputs/violin_ratio_feature_correlations.png", width = 6, height = 4, dpi = 600)
+#ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/violin_ratio_feature_correlations.png", width = 6, height = 4, dpi = 600)
 
 violin.mstus <- violin.cor(mstus.pearson, "mstus")
 violin.mstus
-#ggsave("../outputs/violin_ratio_feature_correlations.png", width = 6, height = 4, dpi = 600)
+#ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/violin_ratio_feature_correlations.png", width = 6, height = 4, dpi = 600)
 
 #arranged.nodup.violin <- ggarrange(violin.raw, violin.sc, violin.norm, ncol = 1, nrow = 3)
 #arranged.nodup.violin
 
 # heatmaps
-png(file = "../outputs/correlation_heatmap_allmetabs_norm.png", width = 8, height = 6, units = "in", res = 300)
+png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_allmetabs_norm.png", width = 8, height = 6, units = "in", res = 300)
 heat.cor(norm.pearson)
 
-png(file = "../outputs/correlation_heatmap_allmetabs_ratio.png", width = 8, height = 6, units = "in", res = 300)
+png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_allmetabs_ratio.png", width = 8, height = 6, units = "in", res = 300)
 heat.cor(ratio.pearson)
 
-png(file = "../outputs/correlation_heatmap_allmetabs_mstus.png", width = 8, height = 6, units = "in", res = 300)
+png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_allmetabs_mstus.png", width = 8, height = 6, units = "in", res = 300)
 heat.cor(mstus.pearson)
 
 # NORMALIZED
@@ -510,11 +543,10 @@ print(paste("The correlations in the mstus data have a trimmed (10%) mean of", r
 ```
 
 
-
 # PCAs with NON-duplicate-filtered data
 
 ```{r}
-load("../data/duplicate_input/imputed_data.RData")
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
 ```
 
 ## color by group and shape by concentration
@@ -538,7 +570,7 @@ for(i in 1:length(norm.impute)){
 }
 
 norm.arranged <- ggarrange(plotlist = norm.pca.list, ncol = 8, nrow = 1, common.legend = T) 
-ggsave("../outputs/pca_groupconc_shape_normalized_WITHdupes.png", norm.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_groupconc_shape_normalized_WITHdupes.png", norm.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
 norm.arranged
 
 # normalized data - group only
@@ -555,7 +587,7 @@ for(i in 1:length(norm.impute)){
 }
 
 norm.arranged <- ggarrange(plotlist = norm.pca.list, ncol = 4, nrow = 2, common.legend = T) 
-ggsave("../outputs/pca_group_normalized_WITHdupes.png", norm.arranged, width = 30, height = 15, dpi = 600)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_group_normalized_WITHdupes.png", norm.arranged, width = 30, height = 15, dpi = 600)
 
 # sc data - group and concentration
 sc.pca.list <- list()
@@ -571,7 +603,7 @@ for(i in 1:length(sc.impute)){
 }
 
 sc.arranged <- ggarrange(plotlist = sc.pca.list, ncol = 8, nrow = 1, common.legend = T) 
-ggsave("../outputs/pca_groupconc_shape_sc_WITHdupes.png", sc.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_groupconc_shape_sc_WITHdupes.png", sc.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
 sc.arranged
 
 # sc data - group only
@@ -588,7 +620,7 @@ for(i in 1:length(sc.impute)){
 }
 
 sc.arranged <- ggarrange(plotlist = sc.pca.list, ncol = 4, nrow = 2, common.legend = T) 
-ggsave("../outputs/pca_group_sc_WITHdupes.png", sc.arranged, width = 30, height = 15, dpi = 600)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_group_sc_WITHdupes.png", sc.arranged, width = 30, height = 15, dpi = 600)
 
 # raw data - group and concentration
 raw.pca.list <- list()
@@ -604,7 +636,7 @@ for(i in 1:length(raw.impute)){
 }
 
 raw.arranged <- ggarrange(plotlist = raw.pca.list, ncol = 8, nrow = 1, common.legend = T) 
-ggsave("../outputs/pca_groupconc_shape_raw_WITHdupes.png", raw.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_groupconc_shape_raw_WITHdupes.png", raw.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
 raw.arranged
 
 # raw data - group only
@@ -621,7 +653,7 @@ for(i in 1:length(raw.impute)){
 }
 
 raw.arranged <- ggarrange(plotlist = raw.pca.list, ncol = 4, nrow = 2, common.legend = T) 
-ggsave("../outputs/pca_group_raw_WITHdupes.png", raw.arranged, width = 30, height = 15, dpi = 600)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_group_raw_WITHdupes.png", raw.arranged, width = 30, height = 15, dpi = 600)
 
 # mstus data - group and concentration
 mstus.pca.list <- list()
@@ -637,7 +669,7 @@ for(i in 1:length(mstus.impute)){
 }
 
 mstus.arranged <- ggarrange(plotlist = mstus.pca.list, ncol = 8, nrow = 1, common.legend = T) 
-ggsave("../outputs/pca_groupconc_shape_mstus_WITHdupes.png", mstus.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_groupconc_shape_mstus_WITHdupes.png", mstus.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
 mstus.arranged
 
 # mstus data - group only
@@ -654,7 +686,7 @@ for(i in 1:length(mstus.impute)){
 }
 
 mstus.arranged <- ggarrange(plotlist = mstus.pca.list, ncol = 4, nrow = 2, common.legend = T) 
-ggsave("../outputs/pca_group_mstus_WITHdupes.png", mstus.arranged, width = 30, height = 15, dpi = 600)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_group_mstus_WITHdupes.png", mstus.arranged, width = 30, height = 15, dpi = 600)
 
 # ratio data - group and concentration
 ratio.pca.list <- list()
@@ -670,7 +702,7 @@ for(i in 1:length(ratio.impute)){
 }
 
 ratio.arranged <- ggarrange(plotlist = ratio.pca.list, ncol = 8, nrow = 1, common.legend = T) 
-ggsave("../outputs/pca_groupconc_shape_ratio_WITHdupes.png", ratio.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_groupconc_shape_ratio_WITHdupes.png", ratio.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
 ratio.arranged
 
 # ratio data - group only
@@ -687,7 +719,7 @@ for(i in 1:length(ratio.impute)){
 }
 
 ratio.arranged <- ggarrange(plotlist = ratio.pca.list, ncol = 4, nrow = 2, common.legend = T) 
-ggsave("../outputs/pca_group_ratio_WITHdupes.png", ratio.arranged, width = 30, height = 15, dpi = 600)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_group_ratio_WITHdupes.png", ratio.arranged, width = 30, height = 15, dpi = 600)
 ```
 
 ## Calculate p-values for first 3 PCs of PCA for each data type by sample group
@@ -934,7 +966,7 @@ pval.plot <-  ggplot(data = input.pc1) +
                 theme_classic() + 
                 labs(x = "data type", y = "-log(P-value)") 
                        
-ggsave("../outputs/PC1_regression_pvals.png", width = 12, height = 8)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/PC1_regression_pvals.png", width = 12, height = 8)
 
 # make fake legend
 fake_data <- data.frame("group" = seq(1,5), "concentration" = seq(1,5))
@@ -996,7 +1028,7 @@ effect.plot <-  ggplot(data = input.pc1) +
                   theme_classic() + 
                   labs(x = "data type", y = "Effect Size") 
                        
-ggsave("../outputs/PC1_regression_effects.png", width = 12, height = 8)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/PC1_regression_effects.png", width = 12, height = 8)
 
 # make fake legend
 fake_data <- data.frame("group" = seq(1,5), "concentration" = seq(1,5))
@@ -1014,7 +1046,7 @@ ggplot(data = fake_data, aes(x = variable, y = value, fill = variable)) +
 ```{r}
 both.plot <- plot_layout(effect.plot / pval.plot, heights = unit(c(3, 3), c("mm", "null")))
 
-ggsave("../outputs/PC1_regression_both.png", width = 12, height = 8)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/PC1_regression_both.png", width = 12, height = 8)
 ```
 
 # Add the correlation heatmaps to the plot
@@ -1024,7 +1056,7 @@ ggsave("../outputs/PC1_regression_both.png", width = 12, height = 8)
   (raw.std.heat.no2 + sc.std.heat.no2 + mstus.std.heat.no2 + norm.std.heat.no2 + plot_layout(ncol = 4, widths = c(1,1,1,2)))) +
   plot_layout(heights = c(0.5, 0.5, 1))
 
-ggsave("../outputs/layout_regression_and_heats.png", width = 8.5, height = 11)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/layout_regression_and_heats.png", width = 8.5, height = 11)
 ```
 
 
@@ -1045,5 +1077,327 @@ for(i in 1:length(norm.impute)){
 names(norm.group.load) <- names(norm.impute)
 
 # save for biomarker analysis
-save(norm.group.load, comp.found.na.filter, file = "../data/biomarker_input/PCA_features_WITHduplicates.RData")
+save(norm.group.load, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/PCA_features_WITHduplicates.RData")
 ```
+
+# Linear models: confirm associations with group and concentration across data types
+
+## Function to write ANOVA models of sample group and concentration associations with metabolite intensity
+
+```{r}
+aov.group.conc <- function(data.list, meta.data){
+  # data.list = list of metabolite abundance data for all labs
+  # meta.data = sample meta data
+  
+  # Create function for 1 lab at a time
+  
+    one.lab <- function(data, meta.data){
+      
+      # prepare results table
+      
+      results <- data.frame(matrix(nrow = ncol(data), ncol = 6))
+      colnames(results) <- c("ES_group", "Pval_group", "adjpval_group",
+                             "ES_conc", "Pval_conc", "adjpval_conc")
+      row.names(results) <- colnames(data)
+     
+      # Log2-transform data
+      
+      data <- log2(data)
+      
+      # Group 
+      
+        ## model
+        group.aov <- apply(data, 2, function(x) aov(x ~ meta.data$group))
+      
+        ## summary
+        group.summary <- lapply(group.aov, summary)
+      
+        ## add to results
+        
+        if(all.equal(names(group.summary), row.names(results))){
+            
+          for(metab in 1:nrow(results)){
+          
+          results[metab, c("ES_group")] <- group.summary[[metab]][[1]][["F value"]][1]
+          
+          results[metab, c("Pval_group")] <- group.summary[[metab]][[1]][["Pr(>F)"]][1]
+          
+        }
+        
+        ## adjust pvalues
+          
+          results$adjpval_group <- p.adjust(results$Pval_group, method = "fdr")
+                    
+        }
+        
+      # Concentration 
+      
+        ## model
+        conc.aov <- apply(data, 2, function(x) aov(x ~ meta.data$concentration))
+      
+        ## summary
+        conc.summary <- lapply(conc.aov, summary)
+      
+        ## add to results
+        
+        if(all.equal(names(conc.summary), row.names(results))){
+            
+          for(metab in 1:nrow(results)){
+          
+          results[metab, c("ES_conc")] <- conc.summary[[metab]][[1]][["F value"]][1]
+          
+          results[metab, c("Pval_conc")] <- conc.summary[[metab]][[1]][["Pr(>F)"]][1]
+          
+        }
+        
+        ## adjust pvalues
+          
+          results$adjpval_conc <- p.adjust(results$Pval_conc, method = "fdr")
+                    
+        }
+
+       return(results)
+        
+    }
+  
+  # apply to all labs
+    
+    all.results <- lapply(data.list, function(x) one.lab(x, meta.data))
+    
+  return(all.results)  
+}
+```
+
+## Apply ANOVA function to each data type
+
+```{r}
+aov.norm <- aov.group.conc(norm.impute, meta.data)
+aov.mstus <- aov.group.conc(mstus.impute, meta.data)
+aov.sc <- aov.group.conc(sc.impute, meta.data)
+aov.raw <- aov.group.conc(raw.impute, meta.data)
+```
+
+## Plot box plots of effect size and p-values for each data type
+
+### Function to plot
+
+```{r}
+aov.box <- function(aov.results, data.type = c("Clean", "Suppression Corrected", "Clean Normalized", "MSTUS Normalized")){
+  
+  all.results <- do.call(rbind, aov.results)
+  all.results.long <- reshape2::melt(all.results)
+  
+  # function for plots
+  
+  single.plot <- function(all.results.long, metric = c("ES", "Pval", "adjpval")){
+    
+    # subset data
+    data <- all.results.long[which(grepl(metric, all.results.long$variable)),]
+    
+    # plot
+    
+    if(metric == "ES"){
+      
+      # scale data
+      data$value <- log10(data$value)
+          
+      # set colors
+      my.colors <- c("ES_conc" = "darkolivegreen3", "ES_group" = "cornflowerblue")
+      
+      fin.plot <- ggplot(data, mapping = aes(x = variable, y = value, fill = variable)) +
+        geom_boxplot() +
+        labs(title = paste(data.type, metric),
+             x = NULL,
+             y = "Log10 F-Statistic") +
+        scale_fill_manual(values = my.colors) +
+        theme_classic() +
+        theme(legend.position = "none")
+    }
+
+    if(metric == "Pval"){
+      
+      data$value <- -log10(data$value)
+
+      # set colors
+      my.colors <- c("Pval_conc" = "darkolivegreen3", "Pval_group" = "cornflowerblue")          
+      fin.plot <- ggplot(data, mapping = aes(x = variable, y = value, fill = variable)) +
+        geom_boxplot() +
+        labs(title = paste(data.type, metric),
+             x = NULL,
+             y = "-Log10 P-value") +
+        scale_fill_manual(values = my.colors) +
+        theme_classic() +
+        theme(legend.position = "none")
+    }    
+ 
+    if(metric == "adjpval"){
+      
+      data$value <- -log10(data$value)
+      
+      # set colors
+      my.colors <- c("adjpval_conc" = "darkolivegreen3", "adjpval_group" = "cornflowerblue")          
+      
+      fin.plot <- ggplot(data, mapping = aes(x = variable, y = value, fill = variable)) +
+        geom_boxplot() +
+        labs(title = paste(data.type, metric),
+             x = NULL,
+             y = "-Log10 Adjusted P-value") +
+        scale_fill_manual(values = my.colors) +
+        theme_classic() +
+        theme(legend.position = "none")
+    }
+       
+    return(fin.plot)
+    
+  }
+  
+  # apply function across all metrics
+  
+  metrics <- c("ES", "Pval", "adjpval")
+  
+  all.metrics <- lapply(metrics, function(x) single.plot(all.results.long, x))
+  
+  return(all.metrics)
+  
+}
+```
+
+### apply to all data types
+
+```{r}
+aov.plot.norm <- aov.box(aov.norm, "Clean Normalized")
+aov.plot.mstus <- aov.box(aov.mstus, "MSTUS Normalized")
+aov.plot.sc <- aov.box(aov.sc, "Suppression Corrected")
+aov.plot.raw <- aov.box(aov.raw, "Clean")
+
+all.lists <- list(aov.plot.raw, aov.plot.sc, aov.plot.mstus, aov.plot.norm)
+
+all_plots <- unlist(all.lists, recursive = FALSE)
+
+# Arrange into a 4-row, 3-column grid
+final_plot <- wrap_plots(all_plots, ncol = 3, nrow = 4)
+
+final_plot
+```
+
+## Function to write linear models and calculate sum-of-squares for group and conc contributions
+
+```{r}
+lm.group.conc <- function(data.list, meta.data){
+  # data.list = metabolite abundance data for all labs
+  # meta.data = sample meta data
+  
+  # function for one lab
+    lm.one.lab <- function(data, meta.data){
+    ## run model and extract results
+    model <- apply(data, 2, function(x) lm(x ~ meta.data$group + meta.data$concentration))
+    
+    anova.res <- lapply(model, function(x) Anova(x, type = "II"))
+    
+    results <- lapply(anova.res, function(x) data.frame(Term = rownames(x),
+                                                        SumSq = x$`Sum Sq`,
+                                                        PctContribution = round(100 * x$`Sum Sq` / sum(x$`Sum Sq`), 1)
+                                                        ))
+    ## pull results into clean table
+
+    # Combine into one long data frame, tagging each row with its metabolite
+    results_long <- do.call(rbind, lapply(names(results), function(m) {
+      df <- results[[m]]
+      df$Metabolite <- m
+      df
+    }))
+
+    # Clean up term names (they'll be like "meta.data$group", "meta.data$concentration", "Residuals")
+    results_long$Term <- gsub("meta\\.data\\$", "", results_long$Term)
+
+    # Summarize: mean and sd of PctContribution per term, across all metabolites
+    summary_stats <- results_long %>%
+      group_by(Term) %>%
+      summarise(Mean = mean(PctContribution, na.rm = TRUE),
+                SD = sd(PctContribution, na.rm = TRUE))
+    
+    # Reshape into the wide format you want: one row, columns = group/concentration/Residuals as "mean ± sd"
+    final_result <- data.frame(
+      group = sprintf("%.1f ± %.1f", 
+                       summary_stats$Mean[summary_stats$Term == "group"],
+                       summary_stats$SD[summary_stats$Term == "group"]),
+      concentration = sprintf("%.1f ± %.1f", 
+                               summary_stats$Mean[summary_stats$Term == "concentration"],
+                               summary_stats$SD[summary_stats$Term == "concentration"]),
+      Residuals = sprintf("%.1f ± %.1f", 
+                           summary_stats$Mean[summary_stats$Term == "Residuals"],
+                           summary_stats$SD[summary_stats$Term == "Residuals"])
+    )
+
+return(final_result)
+    }
+    
+    # apply to all labs
+    
+  result_all <- lapply(data.list, function(x) lm.one.lab(x, meta.data))
+  
+  fin_result_all <- do.call(rbind, result_all)
+
+  return(fin_result_all)
+  
+}
+```
+
+## Apply LM function to data types
+
+```{r}
+raw.lm <- lm.group.conc(lapply(raw.impute, log2), meta.data)
+sc.lm <- lm.group.conc(lapply(sc.impute, log2), meta.data)
+mstus.lm <- lm.group.conc(lapply(mstus.impute, log2), meta.data)
+norm.lm <- lm.group.conc(lapply(norm.impute, log2), meta.data)
+```
+
+## Plot relative contributions per data type
+
+```{r}
+extract_mean <- function(x) as.numeric(sub(" ±.*", "", x))
+
+summarize_table <- function(df, dtype_name) {
+  data.frame(
+    DataType = dtype_name,
+    Term = c("group", "concentration", "residuals"),
+    Mean = c(mean(extract_mean(df$group)),
+             mean(extract_mean(df$concentration)),
+             mean(extract_mean(df$Residuals)))
+  )
+}
+
+# df1, df2, df3, df4 = your four Lab1-Lab8 tables as data frames
+plot_data <- bind_rows(
+  summarize_table(raw.lm, "Clean"),
+  summarize_table(sc.lm, "Suppression Corrected"),
+  summarize_table(mstus.lm, "MSTUS Normalized"),
+  summarize_table(norm.lm, "Clean Normalized")
+)
+
+plot_data$DataType <- factor(plot_data$DataType, 
+                              levels = c("Clean", "Suppression Corrected", 
+                                         "MSTUS Normalized", "Clean Normalized"))
+
+plot_data$Term <- factor(plot_data$Term, levels = c("group", "concentration", "residuals"))
+
+ggplot(plot_data, aes(x = DataType, y = Mean, fill = Term)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = paste0(round(Mean, 1), "%")),
+            position = position_stack(vjust = 0.5), size = 3.5, color = "white") +
+  scale_fill_manual(values = c("group" = "cornflowerblue", "concentration" = "darkolivegreen3", "residuals" = "#898781")) +
+  labs(x = NULL, y = "Mean % contribution", fill = NULL,
+       title = "Relative contribution to model by data type") +
+  theme_classic(base_size = 13) +
+  theme(legend.position = "top")
+
+ggsave(ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/lm_contributions_barchart.png", width = 12, height = 8))
+```
+
+
+
+
+
+
+
+

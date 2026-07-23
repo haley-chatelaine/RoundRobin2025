@@ -1,0 +1,302 @@
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/nmf_functions.R")w <- nmf_basis(norm.impute, 3, meta.data, "group", print.heatmap = T, seed = 3)
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/nmf_functions.R")
+w <- nmf_basis(norm.impute, 3, meta.data, "group", print.heatmap = T, seed = 3)
+ari <- ari.nmf(w, meta.data)
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/nmf_functions.R")
+ari <- ari.nmf(w, meta.data)
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/nmf_functions.R")
+ari <- ari.nmf(w, meta.data)
+h <- nmf_feats(norm.impute, rank = 3, meta.data, meta.col = "group", comp.found.na.filter)
+seed = 3
+rank = 3
+data.list = norm.impute
+split.n = 16
+table(meta.data$rep)
+sample(meta.data, split.n)
+sample(nrow(meta.data), split.n)
+sample(nrow(meta.data), nrow(meta.data) = split.n)
+sample(nrow(meta.data), nrow(meta.data) - split.n)
+sample(nrow(meta.data)[!which(nrow(meta.data) %in% train_idx)], nrow(meta.data) - split.n)
+train_idx <- sample(nrow(meta.data), split.n)
+sample(nrow(meta.data)[!which(nrow(meta.data) %in% train_idx)], nrow(meta.data) - split.n)
+remaining_idx <- seq(1:nrow(meta.data))[!which(seq(1:nrow(meta.data)) %in% train_idx)]
+remaining_idx
+all_idx <- seq(1:nrow(meta.data))
+all_idx
+train_idx <- sample(all_idx, split.n)
+train_idx
+all_idx[!which(all_idx %in% train_idx)]
+all_idx[!(all_idx %in% train_idx)]
+if(split.n == 16){#
+		train_idx <- which(meta.data$rep == 1)#
+		test_idx <- which(meta.data$rep == 2)#
+	} else {#
+		all_idx <- seq(1:nrow(meta.data))#
+		train_idx <- sample(all_idx, split.n)#
+		test_idx <- all_idx[!(all_idx %in% train_idx)]#
+	}
+train_idx
+test_idx
+train.list <- lapply(data.list, function(x) x[train_idx,])
+lapply(train.list, dim)
+lapply(train.list, row.names)
+test.list <- lapply(data.list, function(x) x[test_idx,])
+train.meta <- meta.data[train_idx,]#
+	test.meta <- meta.data[test_idx,]
+train.meta
+test.meta
+nmf_train <- lapply(train.list, function(x) nmf(x, rank))
+w_train <- lapply(nmf_train, basis)
+View(w_train)
+View(w_train$Lab1)
+w_train$Lab1
+h_train <- lapply(nmf_train, coef)
+nmf_train$Lab1@fit@w
+nmf_train$Lab1@fit@W
+train_factors <- lapply(w_train, function(x) apply(x, 2, which.max))
+train_factors$Lab1
+setNames(train.meta$group, train_factors$Lab1)
+setNames(row.names(train.meta), train_factors$Lab1)
+nmf_train_1 <- nmf(train.list$Lab1, rank)
+w_train_1 <- basis(nmf_train_1)
+h_train_1 <- coef(nmf_train_1)
+train_factors_1 <- apply(w_train_1, 2, which.max)
+train_factors_1
+apply(h_train, 1, which.max)
+apply(h_train, 2, which.max)
+apply(h_train_1, 1, which.max)
+w_train_1
+h_train_1
+h_train_1[,1:4]
+train_factors_1 <- apply(w_train_1, 1, which.max)
+train_factors_1
+table(train.meta)
+names(sort(table(x), decreasing = T)[1])
+split(train.meta$group, train_factors_1)
+})
+factor_to_type_1 <- sapply(split(train.meta$group, train_factors_1), function(x) {#
+		names(sort(table(x), decreasing = T))[1]#
+	})
+factor_to_type_1
+}))
+))
+names(sort(table(x), decreasing = T))[1] }))
+factor_to_type <- lapply(train_factors, function(lab) sapply(split(train.meta$group, lab), function(x) { names(sort(table(x), decreasing = T))[1] }))
+train_factors$Lab1
+train_factors <- lapply(w_train, function(x) apply(x, 1, which.max))
+factor_to_type <- lapply(train_factors, function(lab) sapply(split(train.meta$group, lab), function(x) { names(sort(table(x), decreasing = T))[1] }))
+factor_to_type$Lab1
+factor_to_type$Lab2
+factor_to_type$Lab3
+factor_to_type$Lab4
+A_1 <- t(h_train_1)
+w_test_1 <- t(apply(test.list$Lab1, 1, fucntion(sample_row) { nnls(A, sample_row)$x }))
+w_test_1 <- t(apply(test.list$Lab1, 1, fucntion(sample_row) nnls(A, sample_row)$x ))
+w_test_1 <- t(apply(test.list$Lab1, 1, fucntion(sample_row) nnls(A_1, sample_row)$x ))
+w_test_1 <- t(apply(test.list$Lab1, 1, function(sample_row) nnls(A_1, sample_row)$x ))
+nnls(A_1, 1)
+packages <- c("NMF", "nnls", "mclust", "RColorBrewer", "ggplotify",#
+              "pheatmap", "factoextra", "ggplot2", "ggpubr",#
+              "grid", "gridExtra")#
+#
+installed_packages <- packages %in% rownames(installed.packages())#
+if (any(installed_packages == FALSE)) {#
+  install.packages(packages[!installed_packages])#
+}#
+#
+invisible(lapply(packages, library, character.only = TRUE))
+nnls(A_1, 1)
+nnls(A_1, test.list$Lab1[1,])
+test.1 <- test.list$Lab1
+w_test_1 <- t(apply(test.1, 1, function(sample_row) nnls(A_1, sample_row)$x ))
+w_test_1
+nnls(A_1, test.1[1,])$x
+nnls(A_1, test.1[1,])
+colnames(w_train_1)
+test_factor_1 <- apply(w_test_1, 1, which.max)
+test_factor_1
+predicted_factor <- factor_to_type_1[as.character(test_factor_1)]
+predicted_factor
+results <- data.frame(sample = row.names(test.1), true_type = test.meta$group, predicted_type = predicted_factor, row.names = NULL)
+results
+}
+for(samp in 1:nrow(results)){#
+		if(grepl(results$predicted_type[samp], results$true_type[samp])){#
+			results$correct[samp] <- 1#
+		} else {#
+			results$correct[samp] <- 0#
+		}#
+	}
+results
+A <- lapply(h_train, t)
+w_test <- lapply(test.list, function(lab) t(apply(lab, 1, function(sample_row) nnls(A_1, sample_row)$x )))
+w_test <- lapply(test.list, function(lab) t(apply(lab, 1, function(sample_row) nnls(A_1, sample_row)$x )))
+w_test <- lapply(test.list, function(lab) t(apply(lab, 1, function(sample_row) nnls(A, sample_row)$x )))
+w_test <- mapply(function(lab, projection) t(apply(lab, 1, function(sample_row) nnls(projection, sample_row)$x )), test.list, A)
+w_test$Lab1
+w_test
+w_test <- Map(function(test.list, A) { w <- t(apply(test.list, 1, function(sample_row) {#
+  														  nnls(A, sample_row)$x }))
+)
+w_test <- Map(function(test_mat, A_mat) {#
+  				w <- t(apply(test_mat, 1, function(sample_row) {#
+    			nnls(A_mat, sample_row)$x#
+  				}))#
+  				rownames(w) <- rownames(test_mat)#
+  				w#
+				}, test.list, A)
+w_test$Lab1
+test_factor <- lapply(w_test, function(lab) apply(lab, 1, which.max))
+test_factor$Lab1
+}, factor_to_type, test_factor)
+predicted_type <- Map(function(f2t, tf) {#
+  						f2t[as.character(tf)]#
+						}, factor_to_type, test_factor)
+predicted_type$Lab1
+row.names = NULL))
+result.list <- lapply(predicted_type, function(lab) #
+							data.frame(#
+								sample = row.names(test.meta),#
+								true_type = test.meta$group,#
+								predicted_type = lab,#
+								row.names = NULL))
+result.list$Lab1
+result.list$Lab2
+results.list <- Map(function(test_mat, pred_type) {#
+  						df <- data.frame(#
+    							sample = rownames(test_mat),#
+    							true_type = meta.data$group,#
+    							predicted_type = pred_type,#
+    							row.names = NULL#
+  								)#
+  						df$correct <- ifelse(mapply(grepl, df$predicted_type, df$true_type), 1, 0)#
+  						df#
+						}, test.list, predicted_type)#
+					}
+results.list <- Map(function(test_mat, pred_type) {#
+  						df <- data.frame(#
+    							sample = rownames(test_mat),#
+    							true_type = meta.data$group,#
+    							predicted_type = pred_type,#
+    							row.names = NULL#
+  								)#
+  						df$correct <- ifelse(mapply(grepl, df$predicted_type, df$true_type), 1, 0)#
+  						df#
+						}, test.list, predicted_type)
+results.list$Lab1
+row.names = NULL))
+other.results <- Map(function(test_mat, pred_type) {#
+  						df <- data.frame(#
+    							sample = rownames(test_mat),#
+    							true_type = test.meta$group,#
+    							predicted_type = pred_type,#
+    							row.names = NULL#
+  								)#
+  						df$correct <- ifelse(mapply(grepl, df$predicted_type, df$true_type), 1, 0)#
+  						df#
+						}, test.list, predicted_type)
+other.results$Lab1
+other.results$Lab2
+other.results$Lab3
+results.list <- Map(function(test_mat, pred_type) {#
+  						df <- data.frame(#
+    							sample = rownames(test_mat),#
+    							true_type = test.meta$group,#
+    							predicted_type = pred_type,#
+    							row.names = NULL#
+  								)#
+  						df$correct <- ifelse(mapply(grepl, df$predicted_type, df$true_type), 1, 0)#
+  						df#
+						}, test.list, predicted_type)
+accuracy <- lapply(results.list, function(lab) sum(x$correct) / nrow(x) * 100)
+accuracy <- lapply(results.list, function(lab) sum(lab$correct) / nrow(lab) * 100)
+accuracy
+mapply(function(lab, name) print(paste0("The accuracy of predictions for ", name, " is ", lab )), accuracy, names(accuracy))
+mapply(function(lab, name) print(paste0("The accuracy of predictions for ", name, " is ", lab, "%" )), accuracy, names(accuracy))
+}
+nmf.tt <- function(data.list, split.n = 16, rank = 3, seed = 3, meta.data){#
+	# data.list = list of metabolite abundances for all labs#
+	# split.n = number of samples to split into training data#
+	# rank = nmf rank#
+	# seed = random seed#
+	# meta.data = sample metadata#
+	set.seed(seed)#
+	# Split data#
+	if(split.n == 16){#
+		train_idx <- which(meta.data$rep == 1)#
+		test_idx <- which(meta.data$rep == 2)#
+	} else {#
+		all_idx <- seq(1:nrow(meta.data))#
+		train_idx <- sample(all_idx, split.n)#
+		test_idx <- all_idx[!(all_idx %in% train_idx)]#
+	}#
+	train.list <- lapply(data.list, function(x) x[train_idx,])#
+	test.list <- lapply(data.list, function(x) x[test_idx,])#
+	train.meta <- meta.data[train_idx,]#
+	test.meta <- meta.data[test_idx,]	#
+	# NMF on training#
+	#nmf_train_1 <- nmf(train.list$Lab1, rank)#
+	nmf_train <- lapply(train.list, function(x) nmf(x, rank))#
+	#w_train_1 <- basis(nmf_train_1)#
+	#h_train_1 <- coef(nmf_train_1)#
+	w_train <- lapply(nmf_train, basis)#
+	h_train <- lapply(nmf_train, coef)#
+	## assign training sample to dominant factor#
+	#train_factors_1 <- apply(w_train_1, 1, which.max)#
+	train_factors <- lapply(w_train, function(x) apply(x, 1, which.max))#
+	### apply group names to factors#
+	#factor_to_type_1 <- sapply(split(train.meta$group, train_factors_1), function(x) {#
+	#	names(sort(table(x), decreasing = T))[1]#
+	#})#
+	factor_to_type <- lapply(train_factors, function(lab) sapply(split(train.meta$group, lab), function(x) { names(sort(table(x), decreasing = T))[1] }))#
+	# Project onto testing#
+	#A_1 <- t(h_train_1)#
+	A <- lapply(h_train, t)#
+	#test.1 <- test.list$Lab1#
+	#w_test_1 <- t(apply(test.1, 1, function(sample_row) nnls(A_1, sample_row)$x ))#
+	w_test <- Map(function(test_mat, A_mat) {#
+  				w <- t(apply(test_mat, 1, function(sample_row) {#
+    			nnls(A_mat, sample_row)$x#
+  				}))#
+  				rownames(w) <- rownames(test_mat)#
+  				w#
+				}, test.list, A)#
+	# Map to dominant factor#
+	#test_factor_1 <- apply(w_test_1, 1, which.max)#
+	#predicted_factor_1 <- factor_to_type_1[as.character(test_factor_1)]#
+	test_factor <- lapply(w_test, function(lab) apply(lab, 1, which.max))#
+	predicted_type <- Map(function(f2t, tf) {#
+  						f2t[as.character(tf)]#
+						}, factor_to_type, test_factor)#
+#
+	# Evaluate#
+	#results <- data.frame(sample = row.names(test.1), true_type = test.meta$group, predicted_type = predicted_factor_1, row.names = NULL)#
+	#results$correct <- NA#
+	#for(samp in 1:nrow(results)){#
+	#	if(grepl(results$predicted_type[samp], results$true_type[samp])){#
+	#		results$correct[samp] <- 1#
+	#	} else {#
+	#		results$correct[samp] <- 0#
+	#	}#
+	#}#
+	results.list <- Map(function(test_mat, pred_type) {#
+  						df <- data.frame(#
+    							sample = rownames(test_mat),#
+    							true_type = test.meta$group,#
+    							predicted_type = pred_type,#
+    							row.names = NULL#
+  								)#
+  						df$correct <- ifelse(mapply(grepl, df$predicted_type, df$true_type), 1, 0)#
+  						df#
+						}, test.list, predicted_type)#
+	accuracy <- lapply(results.list, function(lab) sum(lab$correct) / nrow(lab) * 100)#
+	mapply(function(lab, name) print(paste0("The accuracy of predictions for ", name, " is ", lab, "%" )), accuracy, names(accuracy))#
+	return(results.list)#
+}
+tt.test <- nmf.tt(norm.impute, split.n = 16, rank = 3, seed = 3, meta.data)
+tt.test
+write_xlsx(tt.test, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_trainTest_results.xlsx")
+install.packages("openxlsx")
+openxlsx::write_xlsx(tt.test, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_trainTest_results.xlsx")
+openxlsx::write.xlsx(tt.test, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_trainTest_results.xlsx")

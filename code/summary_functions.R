@@ -2,11 +2,10 @@
 
 # Load packages
 
-packages <- c("tidyverse", "dplyr", "effectsize", "BiocManager",
+packages <- c("tidyverse", "dplyr", "effectsize", "car",
               "ggplot2", "ggpattern", "ggvenn", "tidyr", "UpSetR", "plotly", "devtools",
-              "RColorBrewer", "ggsci", "ggpubr", "pheatmap", "grafify", "pheatmap", "ggplotify", "patchwork", "grid", "gridExtra",
-              "openxlsx", "data.table", "factoextra", "htmltools", "colorspace",
-              "NMF")
+              "RColorBrewer", "ggsci", "ggpubr", "pheatmap", "grafify", "pheatmap", "ggplotify", "patchwork",
+              "openxlsx", "data.table", "factoextra", "htmltools", "colorspace")
 
 installed_packages <- packages %in% rownames(installed.packages())
 if (any(installed_packages == FALSE)) {
@@ -22,7 +21,7 @@ if("pmp" %in% installed.packages() == F){
   BiocManager::install("pmp")  
 }
 
-library(pmp)
+#library(pmp)
 #library(RaMP)
 invisible(lapply(packages, library, character.only = TRUE))
 
@@ -1669,7 +1668,107 @@ chris.mstus <- function(data, low.bound = 0.2, high.bound = 0.95){
   
 }
   
+euclid.func <- function(data){
+  # data = metabolite data from one lab
+  # lab = character string of lab name
+  # meta.data = metadata (for ordering samples)
+  # heat = plot heatmap
+  # box = plot boxplots
   
+  # Compute distances
+  dist.matrix <- as.matrix(dist(data, method = "euclidean"))
+  
+  # Trim to upper triangle
+  dist.matrix[lower.tri(dist.matrix)] <- NA
+  
+  # Make long
+  dist.long <- reshape2::melt(dist.matrix, varnames = c("Sample1", "Sample2"))
+  
+  return(dist.long)
+}
+  
+  # Plot heatmap
+euclid.heat <- function(dist.long, meta.data, lab)  {
+  # dist.long = output of euclid.func
+  
+  plot  <-  ggplot(dist.long, mapping = aes(x = Sample1, y = Sample2, fill = value)) +
+    geom_tile() +
+    scale_fill_viridis_c(option = "mako", direction = -1, name = "Euclidean\nDistance", na.value = "white") +
+    theme_minimal(base_size = 10) +
+    theme(
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 5),
+      axis.text.y = element_text(size = 5),
+      axis.title = element_blank(),
+      panel.grid = element_blank(),
+      aspect.ratio = 1,
+      legend.title = element_text(size = 6),
+      legend.text = element_text(size = 4),
+      legend.key.size = unit(0.13, "cm"),
+      legend.key.width = unit(0.13, "cm")
+    ) +
+    labs(title = lab)
+ 
+  return(plot)
+   
+}
+  
+  # Plot boxplot
+euclid.box <- function(dist.long.list, meta.data){
+  # dist.long.list = output of euclid.func for all labs, in a list
+  
+    # Mark true duplicates
+     mark.dup <- function(dist.long){
+       # dist.long = dist data for one lab
+       
+       dist.long$dup <- NA
+        for(row in 1:nrow(dist.long)){
+          
+          samp1 <- gsub("_rep.*", "", dist.long$Sample1[row])
+          samp2 <- gsub("_rep.*", "", dist.long$Sample2[row])
+          
+          if(samp1 == samp2){
+            
+            dist.long$dup[row] <- "X"  
+          
+          }
+        }
+       return(dist.long)
+     }
+    
+     dist.long.list <- lapply(dist.long.list, mark.dup)
+    
+    # Plot
+     
+     # Function to build one boxplot for a given lab's dataframe
+     make_boxplot <- function(dist.long, lab_name) {
+       dist.long <- dist.long %>%
+         mutate(dup_status = ifelse(is.na(dup), "Non-duplicate", "Duplicate"))
+       
+       ggplot(dist.long, aes(x = dup_status, y = value, fill = dup_status)) +
+         geom_boxplot(outlier.alpha = 0.3) +
+         labs(x = NULL, y = "Euclidean distance", title = lab_name) +
+         #scale_fill_manual(values = c("Duplicate" = "#E76F51", "Non-duplicate" = "#457B9D")) +
+         theme_classic() +
+         theme(legend.position = "none",
+               plot.title = element_text(hjust = 0.5, face = "bold"))
+     }
+     
+     # Generate a list of plots, one per lab
+     plot_list <- purrr::map2(dist.long.list, names(dist.long.list), make_boxplot)
+     
+     # Arrange into a grid
+     ggarrange(plotlist = plot_list, nrow = 2, ncol = 4)
+    
+  }
+
+calc.cv <- function(data){
+  # data = C13 metabolite data from one lab
+  
+  cvs <- apply(data, 2, function(x) sd(x) / mean(x))
+  
+  return(cvs)
+  
+}
   
   
   

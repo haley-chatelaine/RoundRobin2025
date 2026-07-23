@@ -1,0 +1,151 @@
+---
+title: "06_NMF_clean"
+output: html_document
+date: "2026-07-16"
+---
+
+# Load packages and functions
+
+```{r}
+source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/nmf_functions.R")
+```
+
+# Load data
+
+```{r}
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+
+#par(mfrow = c(2,4))
+lapply(norm.impute, function(x) plot(density(apply(x, 2, as.numeric)), main = ""))
+
+#par(mfrow = c(2, 4))
+lapply(norm.impute, function(x) boxplot((apply(x, 2, as.numeric)), main = ""))
+```
+
+# Test different values for rank
+
+```{r}
+ranks <- c(2, 3, 4, 5, 6)
+
+true.ranks <- nmf_rank(norm.impute, rank.range = ranks, nrun = 30, randomize = FALSE)
+rando.ranks <- nmf_rank(norm.impute, rank.range = ranks, nrun = 30, randomize = TRUE)
+
+grid.arrange(grobs = true.ranks, ncol = 4, top = "Real data")
+grid.arrange(grobs = rando.ranks, ncol = 4, top = "Randomized data")
+```
+
+# Report NMF performance with rank = 3
+
+```{r}
+all.perf <- nmf_performance(norm.impute, rank = 3, seed = 3, meta.data)
+```
+
+# Run NMF, plot heatmaps, and calculate performance of clustering 
+
+```{r}
+png("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_heatmap_WITH_dupes.png", width = 36, height = 18, unit = "in", res = 600)
+
+w <- nmf_basis(norm.impute, 3, meta.data, "group", print.heatmap = T, seed = 3)
+
+```
+
+# Validate that clusters are according to sample group
+
+```{r}
+nmf_cluster(w$w, meta.data)
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_cluster_correlations_WITH_dupes.png", width = 12, height = 8, dpi = 600)
+
+```
+
+# Calculate ARI as another validation metric
+
+```{r}
+ari <- ari.nmf(w, meta.data)
+```
+
+# Determine important features
+
+```{r}
+h <- nmf_feats(norm.impute, rank = 3, meta.data, meta.col = "group", comp.found.na.filter)
+```
+
+## save list of features for biomarker filtering
+
+```{r}
+save(h, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_features_WITH_dupes.RData")
+```
+
+# Calculate feature scores
+
+```{r}
+# calculate score (contribution of feature to basis)
+scores <- lapply(h, function(x) featureScore(t(x), method = "kim"))
+
+# graph distribution of scores
+lapply(scores, function(x) hist(x, breaks = 100))
+```
+
+## save list of feature scores for biomarker filtering
+
+```{r}
+save(scores, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_feature_scores_WITH_dupes.RData")
+```
+
+# Permutation test
+
+```{r}
+# Run Test
+w.1000 <- permute.w(norm.impute, 1000, meta.data)
+
+# Report significance
+ari.p <- perm.sig(w.1000, ari, "ARI")
+corr.p <- perm.sig(w.1000, w$correlation, "Correlation")
+
+# Report summary of permutation results
+ari.results <- permute.sum(w.1000, "ARI")
+corr.results <- permute.sum(w.1000, "Correlation")
+
+```
+
+# Train/Test test
+
+```{r}
+# Correct split
+true.train.test <- nmf.tt(norm.impute, 
+                          split.reps = T,
+                          split.n = NULL, 
+                          rank = 3,
+                          sample.seed = NULL,
+                          nmf.seed = 3, 
+                          meta.data)
+
+# Random splits
+iterations <- seq_len(10)
+
+randos.train.test <- lapply(iterations, function(x){
+  cat("iteration:", x, "\n")
+  nmf.tt(norm.impute, 
+                                                           split.reps = F, 
+                                                           split.n = 16, 
+                                                           rank = 3, 
+                                                           sample.seed = x, 
+                                                           nmf.seed = 3, 
+                                                           meta.data)
+} )
+
+# Report results
+
+accuracy_mat <- sapply(randos.train.test, function(iter_result) {
+  sapply(iter_result, function(lab_df) sum(lab_df$correct) / nrow(lab_df) * 100)
+})
+# accuracy_mat: rows = labs, columns = iterations
+
+accuracy_summary <- data.frame(
+  lab = rownames(accuracy_mat),
+  mean_pct_correct = apply(accuracy_mat, 1, mean),
+  sd_pct_correct = apply(accuracy_mat, 1, sd)
+)
+
+accuracy_summary
+
+```
