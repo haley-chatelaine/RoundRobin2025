@@ -7,13 +7,13 @@ date: "2026-07-16"
 # Load packages and functions
 
 ```{r}
-source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/nmf_functions.R")
+source("./code/nmf_functions.R")
 ```
 
 # Load data
 
 ```{r}
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+load("./data/duplicate_input/imputed_data.RData")
 
 #par(mfrow = c(2,4))
 lapply(norm.impute, function(x) plot(density(apply(x, 2, as.numeric)), main = ""))
@@ -46,11 +46,11 @@ all.var <- nmf_evar(norm.impute, rank = 3, seed = 3, meta.data)
 # Run NMF, plot heatmaps, and calculate performance of clustering 
 
 ```{r}
-png("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_heatmap_WITH_dupes.png", width = 36, height = 18, units = "in", res = 600)
+png("./outputs/NMF_heatmap_WITH_dupes.png", width = 36, height = 18, units = "in", res = 600)
 
 w <- nmf_basis(norm.impute, 3, meta.data, "group", print.heatmap = T, seed = 3)
 
-png("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_heatmap_WITH_dupes_w_conc.png", width = 40, height = 30, units = "in", res = 600)
+png("./outputs/NMF_heatmap_WITH_dupes_w_conc.png", width = 40, height = 30, units = "in", res = 600)
 
 w <- nmf_basis(norm.impute, 3, meta.data, "both", print.heatmap = T, seed = 3)
 
@@ -60,7 +60,7 @@ w <- nmf_basis(norm.impute, 3, meta.data, "both", print.heatmap = T, seed = 3)
 
 ```{r}
 nmf_cluster(w$w, meta.data)
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_cluster_correlations_WITH_dupes.png", width = 12, height = 8, dpi = 600)
+ggsave("./outputs/NMF_cluster_correlations_WITH_dupes.png", width = 12, height = 8, dpi = 600)
 
 ```
 
@@ -79,7 +79,7 @@ h <- nmf_feats(norm.impute, rank = 3, meta.data, meta.col = "group", comp.found.
 ## save list of features for biomarker filtering
 
 ```{r}
-save(h, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_features_WITH_dupes.RData")
+save(h, comp.found.na.filter, file = "./data/biomarker_input/NMF_features_WITH_dupes.RData")
 ```
 
 # Calculate feature scores
@@ -95,7 +95,7 @@ lapply(scores, function(x) hist(x, breaks = 100))
 ## save list of feature scores for biomarker filtering
 
 ```{r}
-save(scores, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_feature_scores_WITH_dupes.RData")
+save(scores, comp.found.na.filter, file = "./data/biomarker_input/NMF_feature_scores_WITH_dupes.RData")
 ```
 
 # Permutation test
@@ -104,9 +104,9 @@ save(scores, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher
 # Run Test
 #w.1000 <- permute.w(norm.impute, 1000, meta.data)
 
-save(w.1000, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_1000_iterations.RData")
+save(w.1000, comp.found.na.filter, file = "./data/biomarker_input/NMF_1000_iterations.RData")
 
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_1000_iterations.RData")
+load("./data/biomarker_input/NMF_1000_iterations.RData")
 
 # Report significance
 ari.p <- perm.sig(w.1000, ari, "ARI")

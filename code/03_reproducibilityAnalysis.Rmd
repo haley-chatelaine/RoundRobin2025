@@ -26,9 +26,9 @@ Input file structure:
   "path/Results/[* Norm/SC/Raw *.xlsx]"
   
 ```{r}
-source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/plotting_functions.R")
-source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/reproducibility_functions.R")
-source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/summary_functions.R")
+source("./code/plotting_functions.R")
+source("./code/reproducibility_functions.R")
+source("./code/summary_functions.R")
 
 library(devtools)
 #install_github("jokergoo/InteractiveComplexHeatmap")
@@ -38,7 +38,7 @@ library(devtools)
 # Load data
 
 ```{r}
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/reproducibility_input/duplicated_filtered_data.RData")
+load("./data/reproducibility_input/duplicated_filtered_data.RData")
 ```
 
 # Determine ClassyFire super class of metabolites using RaMP-DB 2.0 (for use in heatmap annotations)
@@ -117,7 +117,7 @@ while(length(class_factor)>0){
 
 # plot
 
-pdf("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/final_metabs_upset_retainname.pdf",width = 32,height = 16,fonts = "serif")
+pdf("./outputs/final_metabs_upset_retainname.pdf",width = 32,height = 16,fonts = "serif")
 class_upset <- upset(upset.metabs, 
                     queries = mylist,
                     nsets = length(comp.class),
@@ -160,7 +160,7 @@ class_bar <- ggplot(data = metab.bar, aes(x = reorder(class, count), fill = clas
 
 class_bar
 
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/total_classes.png", width = 6, height = 4)
+ggsave("./outputs/total_classes.png", width = 6, height = 4)
 ```
 
 # Metabolite Correlations
@@ -204,7 +204,7 @@ simple.30.subset.cor <- lab.cor(simple.30.subset.log, "pearson")
 simple.30.subset.cor <- simple.30.subset.cor[order(row.names(simple.30.subset.cor)),]
 
 # heatmap
-png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_30_alltypes_simple_withLab2.png", width = 8, height = 12, units = "in", res = 300)
+png(file = "./outputs/correlation_heatmap_30_alltypes_simple_withLab2.png", width = 8, height = 12, units = "in", res = 300)
 heat.cor(simple.30.subset.cor, show.colnames = T, show.rownames = T, show.negatives = T, fontsize = 10)
 
 # summary
@@ -231,7 +231,7 @@ ratio.std.subset.cor <- lab.cor(ratio.std.subset.log, "pearson")
 ratio.std.subset.cor <- ratio.std.subset.cor[order(row.names(ratio.std.subset.cor)),]
 
 # heatmap
-png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_ratio_withLab2.png", width = 3, height = 8, units = "in", res = 300)
+png(file = "./outputs/correlation_heatmap_stds_alltypes_ratio_withLab2.png", width = 3, height = 8, units = "in", res = 300)
 heat.cor(ratio.std.subset.cor, show.colnames = T, show.rownames = F, show.negatives = F)
 
 # summary
@@ -258,7 +258,7 @@ norm.std.subset.cor <- lab.cor(norm.std.subset.log, "pearson")
 norm.std.subset.cor <- norm.std.subset.cor[order(row.names(norm.std.subset.cor)),]
 
 # heatmap
-png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_norm_withLab2.png", width = 4, height = 8, units = "in", res = 300)
+png(file = "./outputs/correlation_heatmap_stds_alltypes_norm_withLab2.png", width = 4, height = 8, units = "in", res = 300)
 heat.cor(norm.std.subset.cor, show.colnames = T, show.rownames = T, show.negatives = F)
 
 # summary
@@ -285,7 +285,7 @@ mstus.std.subset.cor <- lab.cor(mstus.std.subset.log, "pearson")
 mstus.std.subset.cor <- mstus.std.subset.cor[order(row.names(mstus.std.subset.cor)),]
 
 # heatmap
-png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_mstus_withLab2.png", width = 3, height = 8, units = "in", res = 300)
+png(file = "./outputs/correlation_heatmap_stds_alltypes_mstus_withLab2.png", width = 3, height = 8, units = "in", res = 300)
 heat.cor(mstus.std.subset.cor, show.colnames = T, show.rownames = F, show.negatives = F)
 
 # summary
@@ -312,7 +312,7 @@ raw.std.subset.cor <- lab.cor(raw.std.subset.log, "pearson")
 raw.std.subset.cor <- raw.std.subset.cor[order(row.names(raw.std.subset.cor)),]
 
 # heatmap
-png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_raw_withLab2.png", width = 3, height = 8, units = "in", res = 300)
+png(file = "./outputs/correlation_heatmap_stds_alltypes_raw_withLab2.png", width = 3, height = 8, units = "in", res = 300)
 heat.cor(raw.std.subset.cor, show.colnames = T, show.rownames = F, show.negatives = F)
 
 # summary
@@ -342,7 +342,7 @@ ratio.std.subset.no2.log <- lapply(ratio.std.subset.no2, log2)
 ratio.std.subset.no2.cor <- lab.cor(ratio.std.subset.no2.log, "pearson")
 
 # heatmap
-png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_ratio.png", width = 3, height = 8, units = "in", res = 300)
+png(file = "./outputs/correlation_heatmap_stds_alltypes_ratio.png", width = 3, height = 8, units = "in", res = 300)
 heat.cor(ratio.std.subset.no2.cor, show.colnames = T, show.rownames = F, show.negatives = F)
 
 ratio.std.heat.no2 <- heat.cor(ratio.std.subset.no2.cor, show.colnames = T, show.rownames = F, legend = F, show.negatives = F)
@@ -371,7 +371,7 @@ norm.std.subset.no2.log <- lapply(norm.std.subset.no2, log2)
 norm.std.subset.no2.cor <- lab.cor(norm.std.subset.no2.log, "pearson")
 
 # heatmap
-png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_norm.png", width = 4, height = 8, units = "in", res = 300)
+png(file = "./outputs/correlation_heatmap_stds_alltypes_norm.png", width = 4, height = 8, units = "in", res = 300)
 heat.cor(norm.std.subset.no2.cor, show.rownames = T, show.colnames = T, show.negatives = F)
 
 norm.std.heat.no2 <- heat.cor(norm.std.subset.no2.cor, show.colnames = T, show.negatives = F)
@@ -400,7 +400,7 @@ mstus.std.subset.no2.log <- lapply(mstus.std.subset.no2, log2)
 mstus.std.subset.no2.cor <- lab.cor(mstus.std.subset.no2.log, "pearson")
 
 # heatmap
-png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_mstus.png", width = 2.5, height = 8, units = "in", res = 300)
+png(file = "./outputs/correlation_heatmap_stds_alltypes_mstus.png", width = 2.5, height = 8, units = "in", res = 300)
 heat.cor(mstus.std.subset.no2.cor, show.colnames = T, show.rownames = F, show.negatives = F)
 
 mstus.std.heat.no2 <- heat.cor(mstus.std.subset.no2.cor, show.colnames = T, show.rownames = F, legend = F, show.negatives = F)
@@ -429,7 +429,7 @@ sc.std.subset.no2.log <- lapply(sc.std.subset.no2, log2)
 sc.std.subset.no2.cor <- lab.cor(sc.std.subset.no2.log, "pearson")
 
 # heatmap
-png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_sc.png", width = 3, height = 8, units = "in", res = 300)
+png(file = "./outputs/correlation_heatmap_stds_alltypes_sc.png", width = 3, height = 8, units = "in", res = 300)
 heat.cor(sc.std.subset.no2.cor, show.rownames = F, show.colnames = T, show.negatives = F)
 
 sc.std.heat.no2 <- heat.cor(sc.std.subset.no2.cor, show.colnames = T, show.rownames = F, legend = F, show.negatives = F)
@@ -458,7 +458,7 @@ raw.std.subset.no2.log <- lapply(raw.std.subset.no2, log2)
 raw.std.subset.no2.cor <- lab.cor(raw.std.subset.no2.log, "pearson")
 
 # heatmap
-png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_stds_alltypes_raw.png", width = 2.5, height = 8, units = "in", res = 300)
+png(file = "./outputs/correlation_heatmap_stds_alltypes_raw.png", width = 2.5, height = 8, units = "in", res = 300)
 heat.cor(raw.std.subset.no2.cor, show.rownames = F, show.colnames = T, show.negatives = F)
 
 raw.std.heat.no2 <- heat.cor(raw.std.subset.no2.cor, show.colnames = T, show.rownames = F, legend = F, show.negatives = F)
@@ -496,27 +496,27 @@ norm.cor.heat <- heat.cor(norm.pearson)
 
 violin.norm <- violin.cor(norm.pearson, "normalized")
 violin.norm
-#ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/violin_norm_feature_correlations.png", width = 6, height = 4, dpi = 600)
+#ggsave("./outputs/violin_norm_feature_correlations.png", width = 6, height = 4, dpi = 600)
 
 violin.ratio <- violin.cor(ratio.pearson, "ratio")
 violin.ratio
-#ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/violin_ratio_feature_correlations.png", width = 6, height = 4, dpi = 600)
+#ggsave("./outputs/violin_ratio_feature_correlations.png", width = 6, height = 4, dpi = 600)
 
 violin.mstus <- violin.cor(mstus.pearson, "mstus")
 violin.mstus
-#ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/violin_ratio_feature_correlations.png", width = 6, height = 4, dpi = 600)
+#ggsave("./outputs/violin_ratio_feature_correlations.png", width = 6, height = 4, dpi = 600)
 
 #arranged.nodup.violin <- ggarrange(violin.raw, violin.sc, violin.norm, ncol = 1, nrow = 3)
 #arranged.nodup.violin
 
 # heatmaps
-png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_allmetabs_norm.png", width = 8, height = 6, units = "in", res = 300)
+png(file = "./outputs/correlation_heatmap_allmetabs_norm.png", width = 8, height = 6, units = "in", res = 300)
 heat.cor(norm.pearson)
 
-png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_allmetabs_ratio.png", width = 8, height = 6, units = "in", res = 300)
+png(file = "./outputs/correlation_heatmap_allmetabs_ratio.png", width = 8, height = 6, units = "in", res = 300)
 heat.cor(ratio.pearson)
 
-png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_allmetabs_mstus.png", width = 8, height = 6, units = "in", res = 300)
+png(file = "./outputs/correlation_heatmap_allmetabs_mstus.png", width = 8, height = 6, units = "in", res = 300)
 heat.cor(mstus.pearson)
 
 # NORMALIZED
@@ -578,7 +578,7 @@ print(paste("The correlations in the mstus data have a trimmed (10%) mean of", r
 # PCAs with NON-duplicate-filtered data
 
 ```{r}
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+load("./data/duplicate_input/imputed_data.RData")
 ```
 
 ## color by group and shape by concentration
@@ -602,7 +602,7 @@ for(i in 1:length(norm.impute)){
 }
 
 norm.arranged <- ggarrange(plotlist = norm.pca.list, ncol = 8, nrow = 1, common.legend = T) 
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_groupconc_shape_normalized_WITHdupes.png", norm.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
+ggsave("./outputs/pca_groupconc_shape_normalized_WITHdupes.png", norm.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
 norm.arranged
 
 # normalized data - group only
@@ -619,7 +619,7 @@ for(i in 1:length(norm.impute)){
 }
 
 norm.arranged <- ggarrange(plotlist = norm.pca.list, ncol = 4, nrow = 2, common.legend = T) 
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_group_normalized_WITHdupes.png", norm.arranged, width = 30, height = 15, dpi = 600)
+ggsave("./outputs/pca_group_normalized_WITHdupes.png", norm.arranged, width = 30, height = 15, dpi = 600)
 
 # sc data - group and concentration
 sc.pca.list <- list()
@@ -635,7 +635,7 @@ for(i in 1:length(sc.impute)){
 }
 
 sc.arranged <- ggarrange(plotlist = sc.pca.list, ncol = 8, nrow = 1, common.legend = T) 
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_groupconc_shape_sc_WITHdupes.png", sc.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
+ggsave("./outputs/pca_groupconc_shape_sc_WITHdupes.png", sc.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
 sc.arranged
 
 # sc data - group only
@@ -652,7 +652,7 @@ for(i in 1:length(sc.impute)){
 }
 
 sc.arranged <- ggarrange(plotlist = sc.pca.list, ncol = 4, nrow = 2, common.legend = T) 
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_group_sc_WITHdupes.png", sc.arranged, width = 30, height = 15, dpi = 600)
+ggsave("./outputs/pca_group_sc_WITHdupes.png", sc.arranged, width = 30, height = 15, dpi = 600)
 
 # raw data - group and concentration
 raw.pca.list <- list()
@@ -668,7 +668,7 @@ for(i in 1:length(raw.impute)){
 }
 
 raw.arranged <- ggarrange(plotlist = raw.pca.list, ncol = 8, nrow = 1, common.legend = T) 
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_groupconc_shape_raw_WITHdupes.png", raw.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
+ggsave("./outputs/pca_groupconc_shape_raw_WITHdupes.png", raw.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
 raw.arranged
 
 # raw data - group only
@@ -685,7 +685,7 @@ for(i in 1:length(raw.impute)){
 }
 
 raw.arranged <- ggarrange(plotlist = raw.pca.list, ncol = 4, nrow = 2, common.legend = T) 
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_group_raw_WITHdupes.png", raw.arranged, width = 30, height = 15, dpi = 600)
+ggsave("./outputs/pca_group_raw_WITHdupes.png", raw.arranged, width = 30, height = 15, dpi = 600)
 
 # mstus data - group and concentration
 mstus.pca.list <- list()
@@ -701,7 +701,7 @@ for(i in 1:length(mstus.impute)){
 }
 
 mstus.arranged <- ggarrange(plotlist = mstus.pca.list, ncol = 8, nrow = 1, common.legend = T) 
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_groupconc_shape_mstus_WITHdupes.png", mstus.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
+ggsave("./outputs/pca_groupconc_shape_mstus_WITHdupes.png", mstus.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
 mstus.arranged
 
 # mstus data - group only
@@ -718,7 +718,7 @@ for(i in 1:length(mstus.impute)){
 }
 
 mstus.arranged <- ggarrange(plotlist = mstus.pca.list, ncol = 4, nrow = 2, common.legend = T) 
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_group_mstus_WITHdupes.png", mstus.arranged, width = 30, height = 15, dpi = 600)
+ggsave("./outputs/pca_group_mstus_WITHdupes.png", mstus.arranged, width = 30, height = 15, dpi = 600)
 
 # ratio data - group and concentration
 ratio.pca.list <- list()
@@ -734,7 +734,7 @@ for(i in 1:length(ratio.impute)){
 }
 
 ratio.arranged <- ggarrange(plotlist = ratio.pca.list, ncol = 8, nrow = 1, common.legend = T) 
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_groupconc_shape_ratio_WITHdupes.png", ratio.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
+ggsave("./outputs/pca_groupconc_shape_ratio_WITHdupes.png", ratio.arranged, width = 50, height = 10, dpi = 600, limitsize = F)
 ratio.arranged
 
 # ratio data - group only
@@ -751,7 +751,7 @@ for(i in 1:length(ratio.impute)){
 }
 
 ratio.arranged <- ggarrange(plotlist = ratio.pca.list, ncol = 4, nrow = 2, common.legend = T) 
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_group_ratio_WITHdupes.png", ratio.arranged, width = 30, height = 15, dpi = 600)
+ggsave("./outputs/pca_group_ratio_WITHdupes.png", ratio.arranged, width = 30, height = 15, dpi = 600)
 ```
 
 ## Find important features in PCAs of groups
@@ -771,7 +771,7 @@ for(i in 1:length(norm.impute)){
 names(norm.group.load) <- names(norm.impute)
 
 # save for biomarker analysis
-save(norm.group.load, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/PCA_features_WITHduplicates.RData")
+save(norm.group.load, comp.found.na.filter, file = "./data/biomarker_input/PCA_features_WITHduplicates.RData")
 ```
 
 # Linear models: confirm associations with group and concentration across data types - metabolites
@@ -950,7 +950,7 @@ ggplot(plot_data, aes(x = DataType, y = Mean, fill = Term)) +
   theme_classic(base_size = 13) +
   theme(legend.position = "top")
 
-ggsave(ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/lm_contributions_barchart.png", width = 12, height = 8))
+ggsave(ggsave("./outputs/lm_contributions_barchart.png", width = 12, height = 8))
 ```
 
 #### Plot relative contributions per data type (faceted box plot)
@@ -1005,7 +1005,7 @@ ggplot(all.lm.plot, aes(x = data_type, y = PctContribution, fill = Term)) +
   theme_bw() +
   theme(legend.position = "none")
 
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/lm_contributions_boxplot.png", width = 12, height = 8)
+ggsave("./outputs/lm_contributions_boxplot.png", width = 12, height = 8)
 ```
 
 ### LM: PCA scores ~ group + concentration
@@ -1159,7 +1159,7 @@ p2 <- ggplot(pval_long, aes(x = data_type, y = NegLogP, fill = Term)) +
 # --- Combine, stacked vertically ---
 both.plot <- p1 / p2
 
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/lm_contributions_PC1_both.png", width = 12, height = 8)
+ggsave("./outputs/lm_contributions_PC1_both.png", width = 12, height = 8)
 ```
 
 ##### PC2

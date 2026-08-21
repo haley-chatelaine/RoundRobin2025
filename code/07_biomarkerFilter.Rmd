@@ -11,10 +11,10 @@ knitr::opts_chunk$set(echo = TRUE)
 # Load data
 
 ```{r}
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/anova_features_WITH_duplicates.RData")
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/PCA_features_WITHduplicates.RData")
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_features_WITH_dupes.RData")
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_feature_scores_WITH_dupes.RData")
+load("./data/biomarker_input/anova_features_WITH_duplicates.RData")
+load("./data/biomarker_input/PCA_features_WITHduplicates.RData")
+load("./data/biomarker_input/NMF_features_WITH_dupes.RData")
+load("./data/biomarker_input/NMF_feature_scores_WITH_dupes.RData")
 ```
 
 # Load packages
@@ -35,7 +35,7 @@ invisible(lapply(packages, library, character.only = TRUE))
 #BiocManager::install("ComplexHeatmap")
 library(ComplexHeatmap)
 
-source("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/code/reproducibility_functions.R")
+source("./code/reproducibility_functions.R")
 ```
 
 # Only include M+H, M-H, M+e, or M-e features
@@ -238,7 +238,7 @@ nmf.filter <- function(data, comp){
 
 ```{r}
 # Load data for heatmap abundances
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+load("./data/duplicate_input/imputed_data.RData")
 
 # Unlist MFs to get master list
   mf.unlist <- sapply(nmf.feats, "[[", "MF")
@@ -357,7 +357,7 @@ plots.nmf.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data$gr
                                            names(nmf.scaled.data),
                                            SIMPLIFY = FALSE)
 
-pdf(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/heatmap_NMF_feats.pdf", width = 24, height = 16)
+pdf(file = "./outputs/heatmap_NMF_feats.pdf", width = 24, height = 16)
 
 grid.arrange(grobs = plots.nmf.all, ncol = 4)
 
@@ -404,7 +404,7 @@ plots.nmf.avg <- mapply(function(x,y,z) (pheatmap::pheatmap(t(x[order(meta.data.
                                            mf.names,
                                            SIMPLIFY = FALSE)
 
-pdf(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/heatmap_NMF_feats_averaged.pdf", width = 24, height = 16)
+pdf(file = "./outputs/heatmap_NMF_feats_averaged.pdf", width = 24, height = 16)
 
 grid.arrange(grobs = plots.nmf.avg, ncol = 4)
 
@@ -483,7 +483,7 @@ ggplot(long_df, aes(x = sample_group, y = lab, fill = value)) +
   ) +
   labs(x = "Sample Group", y = "Lab")
 
-ggsave(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/heatmap_NMF_feats_averaged_colorScaled.pdf", width = 20, height = 10)
+ggsave(file = "./outputs/heatmap_NMF_feats_averaged_colorScaled.pdf", width = 20, height = 10)
 ```
 
 
@@ -532,7 +532,7 @@ anova.feats <- lapply(anova.feat.filt, function(x) anova.filter(x, 0.05))
 
 ```{r}
 # Load data for heatmap abundances
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/duplicate_input/imputed_data.RData")
+load("./data/duplicate_input/imputed_data.RData")
 
 # Unlist MFs to get master list
   mf.unlist <- sapply(anova.feats, "[[", "MF")
@@ -618,7 +618,7 @@ plots.anova.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data$
                                            names(anova.scaled.data),
                                            SIMPLIFY = FALSE)
 
-pdf(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/heatmap_anova_feats.pdf", width = 24, height = 16)
+pdf(file = "./outputs/heatmap_anova_feats.pdf", width = 24, height = 16)
 
 grid.arrange(grobs = plots.anova.all, ncol = 6)
 
@@ -646,7 +646,7 @@ plots.anova.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data.
                                            names(anova.scaled.data.avg),
                                            SIMPLIFY = FALSE)
 
-pdf(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/heatmap_anova_feats_averaged.pdf",width = 24, height = 16)
+pdf(file = "./outputs/heatmap_anova_feats_averaged.pdf",width = 24, height = 16)
 
 grid.arrange(grobs = plots.anova.all, ncol = 6)
 
@@ -663,7 +663,7 @@ mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.data.avg$group),]), clus
 ```{r}
 venn.diagram(list(names(nmf.scaled.data), names(anova.scaled.data)),
              category.names = c("NMF", "ANOVA"),
-             filename = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMFvANOVA_feats_venn.png", 
+             filename = "./outputs/NMFvANOVA_feats_venn.png", 
              output = TRUE)
 
 ```
@@ -723,7 +723,7 @@ features with retained names in all 8 labs
 
 ```{r}
 # Load data with retained name info
-load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/reproducibility_input/duplicated_filtered_data.RData")
+load("./data/reproducibility_input/duplicated_filtered_data.RData")
 
 overlap.feats <- overlap.metabs(comp.std, "retain.name")
 ```
@@ -802,7 +802,7 @@ plots.overlap.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.dat
                                            names(overlap.scaled.data),
                                            SIMPLIFY = FALSE)
 
-pdf(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/heatmap_overlap_feats.pdf", width = 24, height = 16)
+pdf(file = "./outputs/heatmap_overlap_feats.pdf", width = 24, height = 16)
 
 grid.arrange(grobs = plots.overlap.all, ncol = 6)
 
@@ -830,7 +830,7 @@ plots.overlap.all <- mapply(function(x,y) (pheatmap::pheatmap(t(x[order(meta.dat
                                            names(overlap.scaled.data.avg),
                                            SIMPLIFY = FALSE)
 
-pdf(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/heatmap_overlap_feats_averaged.pdf",width = 24, height = 16)
+pdf(file = "./outputs/heatmap_overlap_feats_averaged.pdf",width = 24, height = 16)
 
 grid.arrange(grobs = plots.overlap.all, ncol = 6)
 
