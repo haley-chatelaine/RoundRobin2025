@@ -1288,6 +1288,7 @@ concat.data <- function(map.results, master.map){
 # Interactive PCA of lab clustering
 
 make.pca <- function(metab, meta, class, group.shape.name = NULL,
+                     graph = TRUE,
                      centered = FALSE, scaled = FALSE, do.log2 = FALSE, z.axis = F,
                      data.type = NULL, subset.labels = NULL,
                      point.size = 5, text.size = 10, color.vector = NULL){
@@ -1295,6 +1296,7 @@ make.pca <- function(metab, meta, class, group.shape.name = NULL,
   # meta = meta data corresponding to metab
   # class = variable name from meta used for coloring scores plot
   # group.shape.name = variable name from meta used to make point shapes
+  # graph = logical indicating whether to only export scores (FALSE) or export graph (TRUE)
   # data.type = character string describing whether data is normalized, corrected, or raw
   # subset.labels = vector of sample types to subset plots into *MUST match variable names in class column
     ## (e.g., if you only want to look at a few groups from the whole PCA)
@@ -1313,101 +1315,107 @@ make.pca <- function(metab, meta, class, group.shape.name = NULL,
   pca_data <- prcomp(pca_data, center = centered, scale = scaled)
   exp_var_pca <- round(((pca_data$sdev^2)/sum(pca_data$sdev^2)*100)[1:3],2)
   
-  if(z.axis == F){
-    pca_plotdata <- data.frame(PC1=pca_data$x[, 1], PC2=pca_data$x[, 2], class=meta[,c(class)])   
-  }else{
-    pca_plotdata <- data.frame(PC1=pca_data$x[, 1], PC2=pca_data$x[, 2], PC3=pca_data$x[,3], class=meta[,c(class)])
-  }
-  
-  if(!is.null(group.shape.name)){
-    pca_plotdata$shape <- as.factor(meta[,c(group.shape.name)])
-  }
-  
-  # Set colors
-  
-  if(is.null(color.vector)){
+  if(graph == FALSE){
     
-    if(class(pca_plotdata[,c("class")]) == "factor" |
-       class(pca_plotdata[,c("class")]) == "character"){
+    return(pca_data)
+    
+  } else {
+    
+    if(z.axis == F){
+      pca_plotdata <- data.frame(PC1=pca_data$x[, 1], PC2=pca_data$x[, 2], class=meta[,c(class)])   
+    }else{
+      pca_plotdata <- data.frame(PC1=pca_data$x[, 1], PC2=pca_data$x[, 2], PC3=pca_data$x[,3], class=meta[,c(class)])
+    }
+    
+    if(!is.null(group.shape.name)){
+      pca_plotdata$shape <- as.factor(meta[,c(group.shape.name)])
+    }
+    
+    # Set colors
+    
+    if(is.null(color.vector)){
       
-      grafify_kelly_pal <- graf_palettes$kelly
+      if(class(pca_plotdata[,c("class")]) == "factor" |
+         class(pca_plotdata[,c("class")]) == "character"){
+        
+        grafify_kelly_pal <- graf_palettes$kelly
+        
+        my_colors <- grafify_kelly_pal[1:length(unique(meta[,c(class)]))]
+        names(my_colors) <- unique(meta[,c(class)])
+        
+      }
       
-      my_colors <- grafify_kelly_pal[1:length(unique(meta[,c(class)]))]
-      names(my_colors) <- unique(meta[,c(class)])
+    }else{
+      
+      my_colors <- color.vector
       
     }
     
-  }else{
-    
-    my_colors <- color.vector
-    
-  }
-  
-  if(is.null(subset.labels)){
-    
-    subset.labels <- meta[,c(class)]
-
+    if(is.null(subset.labels)){
+      
+      subset.labels <- meta[,c(class)]
+      
     }
-  
-  # Set shapes
-  
-  if(!is.null(group.shape.name)){
-    shapes <- c(1:length(unique(meta[,c(group.shape.name)])))
-    names(shapes) <- unique(meta[,c(group.shape.name)])
-    pca_plotdata$shape <- NA 
+    
+    # Set shapes
+    
+    if(!is.null(group.shape.name)){
+      shapes <- c(1:length(unique(meta[,c(group.shape.name)])))
+      names(shapes) <- unique(meta[,c(group.shape.name)])
+      pca_plotdata$shape <- NA 
       for(i in 1:nrow(pca_plotdata)){
         for(j in 1:length(shapes)){
-         if(grepl(paste0("_", names(shapes)[j], "_"), row.names(pca_plotdata)[i])){
-           pca_plotdata$shape[i] <- shapes[j]
-         } 
+          if(grepl(paste0("_", names(shapes)[j], "_"), row.names(pca_plotdata)[i])){
+            pca_plotdata$shape[i] <- shapes[j]
+          } 
         }
       }
+      
+      pca_plotdata$shape <- as.factor(pca_plotdata$shape)
+      
+    }else{
+      shapes <- NA
+      pca_plotdata$shape <- as.factor(1)
+    }
     
-    pca_plotdata$shape <- as.factor(pca_plotdata$shape)
-    
-  }else{
-    shapes <- NA
-    pca_plotdata$shape <- as.factor(1)
-  }
-  
     ## use only filled shape options
-  
+    
     shape.options <- c(21, 22, 23, 24, 25)
-  
-  if(z.axis == FALSE){
     
-    # 2D  using ggplot2
-    
-    pca_plot <- ggplot(pca_plotdata[which(pca_plotdata$class %in% subset.labels),], 
-      aes(x=PC1, y=PC2, fill=class)) + 
-      geom_point(size = point.size, aes(shape = shape, color = class)) +
-      scale_shape_manual(values = shape.options) +
-      guides(size = "none") +
-      theme_classic() +
-      theme(text = element_text(size = text.size)) +
-      xlab(paste0("PC1 (", exp_var_pca[1] ," %)")) +
-      ylab(paste0("PC2 (", exp_var_pca[2] ," %)")) +
-      ggtitle(data.type)
-    
-    if(class(pca_plotdata[,c("class")]) == "factor" | 
-    class(pca_plotdata[,c("class")]) == "character"){
-    
+    if(z.axis == FALSE){
+      
+      # 2D  using ggplot2
+      
+      pca_plot <- ggplot(pca_plotdata[which(pca_plotdata$class %in% subset.labels),], 
+                         aes(x=PC1, y=PC2, fill=class)) + 
+        geom_point(size = point.size, aes(shape = shape, color = class)) +
+        scale_shape_manual(values = shape.options) +
+        guides(size = "none") +
+        theme_classic() +
+        theme(text = element_text(size = text.size)) +
+        xlab(paste0("PC1 (", exp_var_pca[1] ," %)")) +
+        ylab(paste0("PC2 (", exp_var_pca[2] ," %)")) +
+        ggtitle(data.type)
+      
+      if(class(pca_plotdata[,c("class")]) == "factor" | 
+         class(pca_plotdata[,c("class")]) == "character"){
+        
         pca_plot_fin <- pca_plot + scale_fill_manual(values=my_colors) + scale_color_manual(values=my_colors)
-    
+        
       }
-    
-    if(class(pca_plotdata[,c("class")]) == "integer"){
-    
+      
+      if(class(pca_plotdata[,c("class")]) == "integer"){
+        
         pca_plot_fin <- pca_plot + scale_color_gradient()
-    
+        
       }
-    
-    return(pca_plot_fin)
-    
-  }else{
-    
-    # 3D using plotly
-
+      
+      return(pca_plot_fin)
+      
+    }else{
+      
+      # 3D using plotly
+      
       pca_plotly <- plot_ly(pca_plotdata, x = ~PC1, y = ~PC2, z = ~PC3, 
                             color = ~class, mode = "markers", symbol = ~shapes, 
                             colors = group.colors, symbols = shapes,
@@ -1416,14 +1424,16 @@ make.pca <- function(metab, meta, class, group.shape.name = NULL,
       pca_plotly <- pca_plotly %>% layout(scene = list(xaxis = list(title = paste0("PC1 (", exp_var_pca[1] ," %)"), font = list(size = text.size)),
                                                        yaxis = list(title = paste0("PC2 (", exp_var_pca[2] ," %)"), font = list(size = text.size)),
                                                        zaxis = list(title = paste0("PC3 (", exp_var_pca[3] ," %)"), font = list(size = text.size))))
-    
+      
       return(pca_plotly)
       
-      }
+    }
     
+  }
+  
 }
 
-# Evaluate PCA based on regression with study design
+# Evaluate PCA based on regression with study design (1 variable)
 
 eval.pca <- function(metab, meta, class,
                      do.log2 = T, centered = FALSE, scaled = FALSE,
@@ -1566,6 +1576,38 @@ score.pca <- function(metab, meta, class,
   
 }
 
+# Report explained variance of PCs
+
+exp.var <- function(pca.results, n.pc = 3){
+  # pca.results = result from make.pca
+  # n.pc = number of components
+  
+  one.var <- function(result, n.pc){
+    
+    var <- round(((result$sdev^2)/sum(result$sdev^2)*100)[1:n.pc],2)
+    
+    names(var) <- colnames(result$sdev)[1:n.pc]
+    
+    return(var)
+    
+  }
+  
+  vars <- do.call(rbind, lapply(pca.results, function (x) one.var(x, n.pc)))
+  
+  mean.vars <- round(colMeans(vars), 2)
+  
+  sd.vars <- round(apply(vars, 2, sd), 2)
+  
+  for(pc in 1:ncol(vars)){
+    
+    #  print(paste("Average % variance explained in PC", pc, "=", mean.vars[pc], "+/-", sd.vars[pc]))
+    
+  }
+  
+  return(vars)
+  
+}
+
 # Apply MSTUS
 
 mstus <- function(data, low.bound = 0.2, high.bound = 0.95){
@@ -1684,9 +1726,31 @@ euclid.func <- function(data){
   # Make long
   dist.long <- reshape2::melt(dist.matrix, varnames = c("Sample1", "Sample2"))
   
+  # Remove NAs
+  dist.long <- dist.long[-which(is.na(dist.long$value)),]
+  
   return(dist.long)
 }
   
+# Mark true duplicates
+mark.dup <- function(dist.long){
+  # dist.long = dist data for one lab
+  
+  dist.long$dup <- NA
+  for(row in 1:nrow(dist.long)){
+    
+    samp1 <- gsub("_REP.*", "", dist.long$Sample1[row])
+    samp2 <- gsub("_REP.*", "", dist.long$Sample2[row])
+    
+    if(samp1 == samp2){
+      
+      dist.long$dup[row] <- "X"  
+      
+    }
+  }
+  return(dist.long)
+}
+
   # Plot heatmap
 euclid.heat <- function(dist.long, meta.data, lab)  {
   # dist.long = output of euclid.func
@@ -1713,8 +1777,9 @@ euclid.heat <- function(dist.long, meta.data, lab)  {
 }
   
   # Plot boxplot
-euclid.box <- function(dist.long.list, meta.data){
+euclid.box <- function(dist.long.list, data.type = c("raw", "feat.scaled", "max.scaled"), meta.data){
   # dist.long.list = output of euclid.func for all labs, in a list
+  # data.type = character indicating if distances are raw or scaled to number of features or maximum distance
   
     # Mark true duplicates
      mark.dup <- function(dist.long){
@@ -1723,8 +1788,8 @@ euclid.box <- function(dist.long.list, meta.data){
        dist.long$dup <- NA
         for(row in 1:nrow(dist.long)){
           
-          samp1 <- gsub("_rep.*", "", dist.long$Sample1[row])
-          samp2 <- gsub("_rep.*", "", dist.long$Sample2[row])
+          samp1 <- gsub("_REP.*", "", dist.long$Sample1[row])
+          samp2 <- gsub("_REP.*", "", dist.long$Sample2[row])
           
           if(samp1 == samp2){
             
@@ -1737,6 +1802,12 @@ euclid.box <- function(dist.long.list, meta.data){
     
      dist.long.list <- lapply(dist.long.list, mark.dup)
     
+    # Remove same-sample distances
+     
+     dist.long.new <- lapply(dist.long.list, function (x) x[-which(x$dup == "X" &
+                                                                     x$value == 0),])
+     
+     
     # Plot
      
      # Function to build one boxplot for a given lab's dataframe
@@ -1744,8 +1815,8 @@ euclid.box <- function(dist.long.list, meta.data){
        dist.long <- dist.long %>%
          mutate(dup_status = ifelse(is.na(dup), "Non-duplicate", "Duplicate"))
        
-       ggplot(dist.long, aes(x = dup_status, y = value, fill = dup_status)) +
-         geom_boxplot(outlier.alpha = 0.3) +
+       ggplot(dist.long, aes(x = dup_status, y = plot.value, fill = dup_status)) +
+         geom_boxplot(outlier.colour = "black", outlier.alpha = 0.3) +
          labs(x = NULL, y = "Euclidean distance", title = lab_name) +
          #scale_fill_manual(values = c("Duplicate" = "#E76F51", "Non-duplicate" = "#457B9D")) +
          theme_classic() +
@@ -1753,8 +1824,31 @@ euclid.box <- function(dist.long.list, meta.data){
                plot.title = element_text(hjust = 0.5, face = "bold"))
      }
      
+     # adjust columns for data type plotted
+     
+     for(lab in 1:length(dist.long.new)){
+       
+       if(data.type == "raw"){
+         
+         colnames(dist.long.new[[lab]])[which(colnames(dist.long.new[[lab]]) == "value")] <- "plot.value"
+         
+       }
+       
+       if(data.type == "feat.scaled"){
+         
+         colnames(dist.long.new[[lab]])[which(colnames(dist.long.new[[lab]]) == "feat.scale.value")] <- "plot.value"
+         
+       }
+       
+       if(data.type == "max.scaled"){
+         
+         colnames(dist.long.new[[lab]])[which(colnames(dist.long.new[[lab]]) == "max.scale.value")] <- "plot.value"
+         
+       }
+     }
+     
      # Generate a list of plots, one per lab
-     plot_list <- purrr::map2(dist.long.list, names(dist.long.list), make_boxplot)
+     plot_list <- purrr::map2(dist.long.new, names(dist.long.new), make_boxplot)
      
      # Arrange into a grid
      ggarrange(plotlist = plot_list, nrow = 2, ncol = 4)

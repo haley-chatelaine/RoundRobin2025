@@ -77,8 +77,10 @@ print(paste(length(form.results.overlap), " metabolites overlap by formula acros
 
 ```
 
-# Make UpSet plot by metabolite name
-## subset by match type 2 and 3a**
+# Qualitative Overlaps
+
+## Make UpSet plot by metabolite name
+### subset by match type 2 and 3a**
 
 ```{r, results='asis'}
 # Create data for upset
@@ -161,33 +163,59 @@ class_bar
 ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/total_classes.png", width = 6, height = 4)
 ```
 
-# Calculate pairwise correlations of RATIO data for metabolites that overlap (by name) across all labs using any match type WITH lab 2
+# Metabolite Correlations
+
+## WITH Lab 2
+
+### Calculate pairwise correlations of RATIO data for metabolites that overlap (by name) across all labs using any match type WITH lab 2
 
 ```{r}
 # Subset metabs to use
 ratio.30.subset <- lapply(ratio.std, function(x) x[,which(colnames(x) %in% retain.name.results.overlap)])
-metabs.30 <- colnames(ratio.subset.30$Lab1)
+
+# Shorten long metabolite names
+short.names <- function(lab, nchar, ratio.30.subset, comp.std){
+  # lab = character vector of lab names
+  # nchar = length of metabolite name to shorten (number of characters)
+  # ratio.30.subset = list of subset ratio data from all labs
+  # comp.std = list of metabolite meta data from all labs
+  
+  longs <- colnames(ratio.30.subset[[lab]])[nchar(colnames(ratio.30.subset[[lab]])) > 20]
+
+match_idx <- match(longs, comp.std[[lab]]$retain.name)
+colnames(ratio.30.subset[[lab]])[which(colnames(ratio.30.subset[[lab]]) %in% longs)] <- comp.std[[lab]]$MF[match_idx]
+ 
+return(ratio.30.subset[[lab]])
+ 
+}
+
+simple.30.subset <- lapply(names(ratio.30.subset), function(x) short.names(x, 20, ratio.30.subset, comp.std))
+
+names(simple.30.subset) <- names(ratio.30.subset)
+
+metabs.30 <- colnames(simple.30.subset$Lab1)
+
 
 # log transform
-ratio.30.subset.log <- lapply(ratio.30.subset, log2)
+simple.30.subset.log <- lapply(simple.30.subset, log2)
 
 # correlation
-ratio.30.subset.cor <- lab.cor(ratio.30.subset.log, "pearson")
-ratio.30.subset.cor <- ratio.30.subset.cor[order(row.names(ratio.30.subset.cor)),]
+simple.30.subset.cor <- lab.cor(simple.30.subset.log, "pearson")
+simple.30.subset.cor <- simple.30.subset.cor[order(row.names(simple.30.subset.cor)),]
 
 # heatmap
-png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_30_alltypes_ratio_withLab2.png", width = 3, height = 8, units = "in", res = 300)
-heat.cor(ratio.30.subset.cor, show.colnames = T, show.rownames = F, show.negatives = F)
+png(file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/correlation_heatmap_30_alltypes_simple_withLab2.png", width = 8, height = 12, units = "in", res = 300)
+heat.cor(simple.30.subset.cor, show.colnames = T, show.rownames = T, show.negatives = T, fontsize = 10)
 
 # summary
-ratio.30.subset.mean <- mean(unlist(ratio.30.subset.cor), na.rm = T)
-n <- length(ratio.30.subset.cor)
-std.dev.ratio.30.subset <- sd(unlist(ratio.30.subset.cor), na.rm = T)
+simple.30.subset.mean <- mean(unlist(simple.30.subset.cor), na.rm = T)
+n <- length(simple.30.subset.cor)
+std.dev.simple.30.subset <- sd(unlist(simple.30.subset.cor), na.rm = T)
 
-print(paste("The correlations in the standard-subset (all match types) ratio data have a mean of", round(ratio.30.subset.mean, 2), "and standard deviation of", round(std.dev.ratio.30.subset, 2)))
+print(paste("The correlations in the standard-subset (all match types) simple data have a mean of", round(simple.30.subset.mean, 2), "and standard deviation of", round(std.dev.simple.30.subset, 2)))
 ```
 
-# Calculate pairwise correlations of RATIO data for metabolites that have standard data in 3+ labs using any match type WITH lab 2
+### Calculate pairwise correlations of RATIO data for metabolites that have standard data in 3+ labs using any match type WITH lab 2
 
 ```{r}
 # Subset metabs to use
@@ -214,7 +242,7 @@ std.dev.ratio.std.subset <- sd(unlist(ratio.std.subset.cor), na.rm = T)
 print(paste("The correlations in the standard-subset (all match types) ratio data have a mean of", round(ratio.std.subset.mean, 2), "and standard deviation of", round(std.dev.ratio.std.subset, 2)))
 ```
 
-# Calculate pairwise correlations of NORM data for metabolites that have standard data in 3+ labs using any match type WITH lab 2
+### Calculate pairwise correlations of NORM data for metabolites that have standard data in 3+ labs using any match type WITH lab 2
 
 ```{r}
 # Subset metabs to use
@@ -241,7 +269,7 @@ std.dev.norm.std.subset <- sd(unlist(norm.std.subset.cor), na.rm = T)
 print(paste("The correlations in the standard-subset (all match types) norm data have a mean of", round(norm.std.subset.mean, 2), "and standard deviation of", round(std.dev.norm.std.subset, 2)))
 ```
 
-# Calculate pairwise correlations of MSTUS data for metabolites that have standard data in 3+ labs using any match type WITH lab 2
+### Calculate pairwise correlations of MSTUS data for metabolites that have standard data in 3+ labs using any match type WITH lab 2
 
 ```{r}
 # Subset metabs to use
@@ -268,7 +296,7 @@ std.dev.mstus.std.subset <- sd(unlist(mstus.std.subset.cor), na.rm = T)
 print(paste("The correlations in the standard-subset (all match types) mstus data have a mean of", round(mstus.std.subset.mean, 2), "and standard deviation of", round(std.dev.mstus.std.subset, 2)))
 ```
 
-# Calculate pairwise correlations of RAW data for metabolites that have standard data in 3+ labs using any match type WITH lab 2
+### Calculate pairwise correlations of RAW data for metabolites that have standard data in 3+ labs using any match type WITH lab 2
 
 ```{r}
 # Subset metabs to use
@@ -295,7 +323,9 @@ std.dev.raw.std.subset <- sd(unlist(raw.std.subset.cor), na.rm = T)
 print(paste("The correlations in the standard-subset (all match types) raw data have a mean of", round(raw.std.subset.mean, 2), "and standard deviation of", round(std.dev.raw.std.subset, 2)))
 ```
 
-# Calculate pairwise correlations of RATIO data for metabolites that have standard data in 3+ labs using any match type WITHOUT lab 2
+## WITHOUT Lab 2
+
+### Calculate pairwise correlations of RATIO data for metabolites that have standard data in 3+ labs using any match type WITHOUT lab 2
 
 ```{r}
 # Subset metabs to use
@@ -325,7 +355,7 @@ std.dev.ratio.std.subset <- sd(unlist(ratio.std.subset.no2.cor), na.rm = T)
 print(paste("The correlations in the standard-subset (all match types) ratio data have a mean of", round(ratio.std.subset.mean, 2), "and standard deviation of", round(std.dev.ratio.std.subset, 2)))
 ```
 
-# Calculate pairwise correlations of NORM data for metabolites that have standard data in 3+ labs using any match type WITHOUT lab 2
+### Calculate pairwise correlations of NORM data for metabolites that have standard data in 3+ labs using any match type WITHOUT lab 2
 
 ```{r}
 # Subset metabs to use
@@ -354,7 +384,7 @@ std.dev.norm.std.subset <- sd(unlist(norm.std.subset.no2.cor), na.rm = T)
 print(paste("The correlations in the standard-subset (all match types) norm data have a mean of", round(norm.std.subset.mean, 2), "and standard deviation of", round(std.dev.norm.std.subset, 2)))
 ```
 
-# Calculate pairwise correlations of MSTUS data for metabolites that have standard data in 3+ labs using any match type WITHOUT lab 2
+### Calculate pairwise correlations of MSTUS data for metabolites that have standard data in 3+ labs using any match type WITHOUT lab 2
 
 ```{r}
 # Subset metabs to use
@@ -383,7 +413,7 @@ std.dev.mstus.std.subset <- sd(unlist(mstus.std.subset.no2.cor), na.rm = T)
 print(paste("The correlations in the standard-subset (all match types) mstus data have a mean of", round(mstus.std.subset.mean, 2), "and standard deviation of", round(std.dev.mstus.std.subset, 2)))
 ```
 
-# Calculate pairwise correlations of SC data for metabolites that have standard data in 3+ labs using any match type WITHOUT lab 2
+### Calculate pairwise correlations of SC data for metabolites that have standard data in 3+ labs using any match type WITHOUT lab 2
 
 ```{r}
 # Subset metabs to use
@@ -412,7 +442,7 @@ std.dev.sc.std.subset <- sd(unlist(sc.std.subset.no2.cor), na.rm = T)
 print(paste("The correlations in the standard-subset (all match types) sc data have a mean of", round(sc.std.subset.mean, 2), "and standard deviation of", round(std.dev.sc.std.subset, 2)))
 ```
 
-# Calculate pairwise correlations of RAW data for metabolites that have standard data in 3+ labs using any match type WITHOUT lab 2
+### Calculate pairwise correlations of RAW data for metabolites that have standard data in 3+ labs using any match type WITHOUT lab 2
 
 ```{r}
 # Subset metabs to use
@@ -441,7 +471,9 @@ std.dev.raw.std.subset <- sd(unlist(raw.std.subset.no2.cor), na.rm = T)
 print(paste("The correlations in the standard-subset (all match types) raw data have a mean of", round(raw.std.subset.mean, 2), "and standard deviation of", round(std.dev.raw.std.subset, 2)))
 ```
 
-# Calculate pairwise correlations of abundance data for shared metabolites (by name) between labs - Pearson
+## All metabolites
+
+### Calculate pairwise correlations of abundance data for shared metabolites (by name) between labs - Pearson
 
 ```{r, message=FALSE}
 # log2 transform data
@@ -534,7 +566,7 @@ print(paste("The correlations in the mstus data have a trimmed (10%) mean of", r
 
 ```
 
-## Check distribution of negative values by lab pair (use full comparisons)
+### Check distribution of negative values by lab pair (use full comparisons)
 
 ```{r}
 #mstus.lab.negs <- apply(mstus.pearson, 2, function (x) length(which(x < 0)))
@@ -722,344 +754,6 @@ ratio.arranged <- ggarrange(plotlist = ratio.pca.list, ncol = 4, nrow = 2, commo
 ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/pca_group_ratio_WITHdupes.png", ratio.arranged, width = 30, height = 15, dpi = 600)
 ```
 
-## Calculate p-values for first 3 PCs of PCA for each data type by sample group
-
-```{r}
-# normalized
-norm.group.pvals <- data.frame(matrix(nrow = 3, ncol = length(norm.impute)))
-colnames(norm.group.pvals) <- names(norm.impute)
-row.names(norm.group.pvals) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(norm.impute)){
-  
-  norm.group.pvals[,i] <- eval.pca(norm.impute[[i]], meta.data, "group", do.log2 = T, centered = T, scaled = T, return.p = T)
-  
-}
-
-# sc
-sc.group.pvals <- data.frame(matrix(nrow = 3, ncol = length(sc.impute)))
-colnames(sc.group.pvals) <- names(sc.impute)
-row.names(sc.group.pvals) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(sc.impute)){
-  
-  sc.group.pvals[,i] <- eval.pca(sc.impute[[i]], meta.data, "group", do.log2 = T, centered = T, scaled = T, return.p = T)
-  
-}
-
-# rawalized
-raw.group.pvals <- data.frame(matrix(nrow = 3, ncol = length(raw.impute)))
-colnames(raw.group.pvals) <- names(raw.impute)
-row.names(raw.group.pvals) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(raw.impute)){
-  
-  raw.group.pvals[,i] <- eval.pca(raw.impute[[i]], meta.data, "group", do.log2 = T, centered = T, scaled = T, return.p = T)
-  
-}
-
-# mstus
-mstus.group.pvals <- data.frame(matrix(nrow = 3, ncol = length(mstus.impute)))
-colnames(mstus.group.pvals) <- names(mstus.impute)
-row.names(mstus.group.pvals) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(mstus.impute)){
-  
-  mstus.group.pvals[,i] <- eval.pca(mstus.impute[[i]], meta.data, "group", do.log2 = T, centered = T, scaled = T, return.p = T)
-  
-}
-
-```
-
-## Calculate p-values for first 3 PCs of PCA for each data type by concentration
-
-```{r}
-# normalized
-norm.conc.pvals <- data.frame(matrix(nrow = 3, ncol = length(norm.impute)))
-colnames(norm.conc.pvals) <- names(norm.impute)
-row.names(norm.conc.pvals) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(norm.impute)){
-  
-  norm.conc.pvals[,i] <- eval.pca(norm.impute[[i]], meta.data, "concentration", do.log2 = T, centered = T, scaled = T, return.p = T)
-  
-}
-
-# sc
-sc.conc.pvals <- data.frame(matrix(nrow = 3, ncol = length(sc.impute)))
-colnames(sc.conc.pvals) <- names(sc.impute)
-row.names(sc.conc.pvals) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(sc.impute)){
-  
-  sc.conc.pvals[,i] <- eval.pca(sc.impute[[i]], meta.data, "concentration", do.log2 = T, centered = T, scaled = T, return.p = T)
-  
-}
-
-# rawalized
-raw.conc.pvals <- data.frame(matrix(nrow = 3, ncol = length(raw.impute)))
-colnames(raw.conc.pvals) <- names(raw.impute)
-row.names(raw.conc.pvals) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(raw.impute)){
-  
-  raw.conc.pvals[,i] <- eval.pca(raw.impute[[i]], meta.data, "concentration", do.log2 = T, centered = T, scaled = T, return.p = T)
-  
-}
-
-# mstus
-mstus.conc.pvals <- data.frame(matrix(nrow = 3, ncol = length(mstus.impute)))
-colnames(mstus.conc.pvals) <- names(mstus.impute)
-row.names(mstus.conc.pvals) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(mstus.impute)){
-  
-  mstus.conc.pvals[,i] <- eval.pca(mstus.impute[[i]], meta.data, "concentration", do.log2 = T, centered = T, scaled = T, return.p = T)
-  
-}
-```
-
-## Calculate effect sizes for first 3 PCs of PCA for each data type by sample group
-
-```{r}
-# normalized
-norm.group.effects <- data.frame(matrix(nrow = 3, ncol = length(norm.impute)))
-colnames(norm.group.effects) <- names(norm.impute)
-row.names(norm.group.effects) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(norm.impute)){
-  
-  norm.group.effects[,i] <- eval.pca(norm.impute[[i]], meta.data, "group", do.log2 = T, centered = T, scaled = T, return.r = T)
-  
-}
-
-# sc
-sc.group.effects <- data.frame(matrix(nrow = 3, ncol = length(sc.impute)))
-colnames(sc.group.effects) <- names(sc.impute)
-row.names(sc.group.effects) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(sc.impute)){
-  
-  sc.group.effects[,i] <- eval.pca(sc.impute[[i]], meta.data, "group", do.log2 = T, centered = T, scaled = T, return.r = T)
-  
-}
-
-# rawalized
-raw.group.effects <- data.frame(matrix(nrow = 3, ncol = length(raw.impute)))
-colnames(raw.group.effects) <- names(raw.impute)
-row.names(raw.group.effects) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(raw.impute)){
-  
-  raw.group.effects[,i] <- eval.pca(raw.impute[[i]], meta.data, "group", do.log2 = T, centered = T, scaled = T, return.r = T)
-  
-}
-
-# mstus
-mstus.group.effects <- data.frame(matrix(nrow = 3, ncol = length(mstus.impute)))
-colnames(mstus.group.effects) <- names(mstus.impute)
-row.names(mstus.group.effects) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(mstus.impute)){
-  
-  mstus.group.effects[,i] <- eval.pca(mstus.impute[[i]], meta.data, "group", do.log2 = T, centered = T, scaled = T, return.r = T)
-  
-}
-
-```
-
-## Calculate effect sizes for first 3 PCs of PCA for each data type by concentration
-
-```{r}
-# normalized
-norm.conc.effects <- data.frame(matrix(nrow = 3, ncol = length(norm.impute)))
-colnames(norm.conc.effects) <- names(norm.impute)
-row.names(norm.conc.effects) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(norm.impute)){
-  
-  norm.conc.effects[,i] <- eval.pca(norm.impute[[i]], meta.data, "concentration", do.log2 = T, centered = T, scaled = T, return.r = T)
-  
-}
-
-# sc
-sc.conc.effects <- data.frame(matrix(nrow = 3, ncol = length(sc.impute)))
-colnames(sc.conc.effects) <- names(sc.impute)
-row.names(sc.conc.effects) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(sc.impute)){
-  
-  sc.conc.effects[,i] <- eval.pca(sc.impute[[i]], meta.data, "concentration", do.log2 = T, centered = T, scaled = T, return.r = T)
-  
-}
-
-# rawalized
-raw.conc.effects <- data.frame(matrix(nrow = 3, ncol = length(raw.impute)))
-colnames(raw.conc.effects) <- names(raw.impute)
-row.names(raw.conc.effects) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(raw.impute)){
-  
-  raw.conc.effects[,i] <- eval.pca(raw.impute[[i]], meta.data, "concentration", do.log2 = T, centered = T, scaled = T, return.r = T)
-  
-}
-
-# mstus
-mstus.conc.effects <- data.frame(matrix(nrow = 3, ncol = length(mstus.impute)))
-colnames(mstus.conc.effects) <- names(mstus.impute)
-row.names(mstus.conc.effects) <- c("PC1", "PC2", "PC3")
-
-for(i in 1:length(mstus.impute)){
-  
-  mstus.conc.effects[,i] <- eval.pca(mstus.impute[[i]], meta.data, "concentration", do.log2 = T, centered = T, scaled = T, return.r = T)
-  
-}
-```
-
-## Visualize PCA regression results - p-values
-
-```{r}
-# wrangle pvals from above
-
-pval.data <- list(norm.group.pvals, norm.conc.pvals, sc.group.pvals, sc.conc.pvals, raw.group.pvals, raw.conc.pvals, mstus.group.pvals, mstus.conc.pvals)
-
-pval.melt <- lapply(pval.data, function (x) reshape2::melt(rownames_to_column(x, var = "PC"), id = "PC", variable.name = "Lab", value.name = "Pvalue"))
-names(pval.melt) <- c("norm.group", "norm.conc", "sc.group", "sc.conc", "raw.group", "raw.conc", "mstus.group", "mstus.conc")
-
-for(i in 1:length(pval.melt)){
-  
-  pval.melt[[i]]$data <- gsub("*[.].*", "", names(pval.melt)[[i]])
-  pval.melt[[i]]$variable <- gsub(".*[.]", "", names(pval.melt)[[i]])
-  
-}
-
-for(j in 1:length(pval.melt)){
-  
-  if(j == 1){
-    
-    input <- pval.melt[[j]]
-    
-  }else{
-    
-    input <- rbind(input, pval.melt[[j]])
-    
-  }
-  
-}
-
-input$data <- factor(input$data, levels = c("raw", "sc", "mstus", "norm"))
-
-# plot
-  
-  ggplot(data = input) +
-    geom_boxplot(data = input[which(input$variable == "group"),], aes(x = data, y = -log(as.numeric(Pvalue))), color = "cornflowerblue") +
-    geom_boxplot(data = input[which(input$variable == "conc"),], aes(x = data, y = -log(as.numeric(Pvalue))), color = "darkolivegreen3") +
-    facet_grid(input$Lab[which(input$variable == "group")] ~ input$PC[which(input$variable == "group")]) 
-
-# PC1 only
-
-input.pc1 <- input[which(input$PC == "PC1"),]
-
-pval.plot <-  ggplot(data = input.pc1) +
-                geom_boxplot(data = input.pc1[which(input.pc1$variable == "group"),], aes(x = data, y = -log(as.numeric(Pvalue))), color = "cornflowerblue") +
-                geom_boxplot(data = input.pc1[which(input.pc1$variable == "conc"),], aes(x = data, y = -log(as.numeric(Pvalue))), color = "darkolivegreen3") +
-                theme_classic() + 
-                labs(x = "data type", y = "-log(P-value)") 
-                       
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/PC1_regression_pvals.png", width = 12, height = 8)
-
-# make fake legend
-fake_data <- data.frame("group" = seq(1,5), "concentration" = seq(1,5))
-fake_data <- reshape2::melt(fake_data)
-
-ggplot(data = fake_data, aes(x = variable, y = value, color = variable)) +
-  geom_boxplot() +
-  theme_classic() +
-  scale_color_manual(values = c("group" = "cornflowerblue", "concentration" = "darkolivegreen3"))
-  
-```
-## Visualize PCA regression results - effect sizes
-
-```{r}
-# wrangle effects from above
-
-effect.data <- list(norm.group.effects, norm.conc.effects, sc.group.effects, sc.conc.effects, raw.group.effects, raw.conc.effects, mstus.group.effects, mstus.conc.effects)
-
-effect.melt <- lapply(effect.data, function (x) reshape2::melt(rownames_to_column(x, var = "PC"), id = "PC", variable.name = "Lab", value.name = "effect"))
-names(effect.melt) <- c("norm.group", "norm.conc", "sc.group", "sc.conc", "raw.group", "raw.conc", "mstus.group", "mstus.conc")
-
-for(i in 1:length(effect.melt)){
-  
-  effect.melt[[i]]$data <- gsub("*[.].*", "", names(effect.melt)[[i]])
-  effect.melt[[i]]$variable <- gsub(".*[.]", "", names(effect.melt)[[i]])
-  
-}
-
-for(j in 1:length(effect.melt)){
-  
-  if(j == 1){
-    
-    input <- effect.melt[[j]]
-    
-  }else{
-    
-    input <- rbind(input, effect.melt[[j]])
-    
-  }
-  
-}
-
-input$data <- factor(input$data, levels = c("raw", "sc", "mstus", "norm"))
-
-# plot
-  
-  ggplot(data = input) +
-    geom_boxplot(data = input[which(input$variable == "group"),], aes(x = data, y = effect), color = "cornflowerblue") +
-    geom_boxplot(data = input[which(input$variable == "conc"),], aes(x = data, y = effect), color = "darkolivegreen3") +
-    facet_grid(input$Lab[which(input$variable == "group")] ~ input$PC[which(input$variable == "group")]) 
-
-# PC1 only
-
-input.pc1 <- input[which(input$PC == "PC1"),]
-
-effect.plot <-  ggplot(data = input.pc1) +
-                  geom_boxplot(data = input.pc1[which(input.pc1$variable == "group"),], aes(x = data, y = effect), fill = "cornflowerblue") +
-                  geom_boxplot(data = input.pc1[which(input.pc1$variable == "conc"),], aes(x = data, y = effect), fill = "darkolivegreen3") +
-                  theme_classic() + 
-                  labs(x = "data type", y = "Effect Size") 
-                       
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/PC1_regression_effects.png", width = 12, height = 8)
-
-# make fake legend
-fake_data <- data.frame("group" = seq(1,5), "concentration" = seq(1,5))
-fake_data <- reshape2::melt(fake_data)
-
-ggplot(data = fake_data, aes(x = variable, y = value, fill = variable)) +
-  geom_boxplot() +
-  theme_classic() +
-  scale_fill_manual(values = c("group" = "cornflowerblue", "concentration" = "darkolivegreen3"))
-  
-```
-
-# Plot both p-value and effect size on same plot
-
-```{r}
-both.plot <- plot_layout(effect.plot / pval.plot, heights = unit(c(3, 3), c("mm", "null")))
-
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/PC1_regression_both.png", width = 12, height = 8)
-```
-
-# Add the correlation heatmaps to the plot
-
-```{r}
-((effect.plot + pval.plot + plot_layout(ncol = 1)) +
-  (raw.std.heat.no2 + sc.std.heat.no2 + mstus.std.heat.no2 + norm.std.heat.no2 + plot_layout(ncol = 4, widths = c(1,1,1,2)))) +
-  plot_layout(heights = c(0.5, 0.5, 1))
-
-ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/layout_regression_and_heats.png", width = 8.5, height = 11)
-```
-
-
 ## Find important features in PCAs of groups
 
 ```{r}
@@ -1080,215 +774,19 @@ names(norm.group.load) <- names(norm.impute)
 save(norm.group.load, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/PCA_features_WITHduplicates.RData")
 ```
 
-# Linear models: confirm associations with group and concentration across data types
-
-## Function to write ANOVA models of sample group and concentration associations with metabolite intensity
-
-```{r}
-aov.group.conc <- function(data.list, meta.data){
-  # data.list = list of metabolite abundance data for all labs
-  # meta.data = sample meta data
-  
-  # Create function for 1 lab at a time
-  
-    one.lab <- function(data, meta.data){
-      
-      # prepare results table
-      
-      results <- data.frame(matrix(nrow = ncol(data), ncol = 6))
-      colnames(results) <- c("ES_group", "Pval_group", "adjpval_group",
-                             "ES_conc", "Pval_conc", "adjpval_conc")
-      row.names(results) <- colnames(data)
-     
-      # Log2-transform data
-      
-      data <- log2(data)
-      
-      # Group 
-      
-        ## model
-        group.aov <- apply(data, 2, function(x) aov(x ~ meta.data$group))
-      
-        ## summary
-        group.summary <- lapply(group.aov, summary)
-      
-        ## add to results
-        
-        if(all.equal(names(group.summary), row.names(results))){
-            
-          for(metab in 1:nrow(results)){
-          
-          results[metab, c("ES_group")] <- group.summary[[metab]][[1]][["F value"]][1]
-          
-          results[metab, c("Pval_group")] <- group.summary[[metab]][[1]][["Pr(>F)"]][1]
-          
-        }
-        
-        ## adjust pvalues
-          
-          results$adjpval_group <- p.adjust(results$Pval_group, method = "fdr")
-                    
-        }
-        
-      # Concentration 
-      
-        ## model
-        conc.aov <- apply(data, 2, function(x) aov(x ~ meta.data$concentration))
-      
-        ## summary
-        conc.summary <- lapply(conc.aov, summary)
-      
-        ## add to results
-        
-        if(all.equal(names(conc.summary), row.names(results))){
-            
-          for(metab in 1:nrow(results)){
-          
-          results[metab, c("ES_conc")] <- conc.summary[[metab]][[1]][["F value"]][1]
-          
-          results[metab, c("Pval_conc")] <- conc.summary[[metab]][[1]][["Pr(>F)"]][1]
-          
-        }
-        
-        ## adjust pvalues
-          
-          results$adjpval_conc <- p.adjust(results$Pval_conc, method = "fdr")
-                    
-        }
-
-       return(results)
-        
-    }
-  
-  # apply to all labs
-    
-    all.results <- lapply(data.list, function(x) one.lab(x, meta.data))
-    
-  return(all.results)  
-}
-```
-
-## Apply ANOVA function to each data type
-
-```{r}
-aov.norm <- aov.group.conc(norm.impute, meta.data)
-aov.mstus <- aov.group.conc(mstus.impute, meta.data)
-aov.sc <- aov.group.conc(sc.impute, meta.data)
-aov.raw <- aov.group.conc(raw.impute, meta.data)
-```
-
-## Plot box plots of effect size and p-values for each data type
-
-### Function to plot
-
-```{r}
-aov.box <- function(aov.results, data.type = c("Clean", "Suppression Corrected", "Clean Normalized", "MSTUS Normalized")){
-  
-  all.results <- do.call(rbind, aov.results)
-  all.results.long <- reshape2::melt(all.results)
-  
-  # function for plots
-  
-  single.plot <- function(all.results.long, metric = c("ES", "Pval", "adjpval")){
-    
-    # subset data
-    data <- all.results.long[which(grepl(metric, all.results.long$variable)),]
-    
-    # plot
-    
-    if(metric == "ES"){
-      
-      # scale data
-      data$value <- log10(data$value)
-          
-      # set colors
-      my.colors <- c("ES_conc" = "darkolivegreen3", "ES_group" = "cornflowerblue")
-      
-      fin.plot <- ggplot(data, mapping = aes(x = variable, y = value, fill = variable)) +
-        geom_boxplot() +
-        labs(title = paste(data.type, metric),
-             x = NULL,
-             y = "Log10 F-Statistic") +
-        scale_fill_manual(values = my.colors) +
-        theme_classic() +
-        theme(legend.position = "none")
-    }
-
-    if(metric == "Pval"){
-      
-      data$value <- -log10(data$value)
-
-      # set colors
-      my.colors <- c("Pval_conc" = "darkolivegreen3", "Pval_group" = "cornflowerblue")          
-      fin.plot <- ggplot(data, mapping = aes(x = variable, y = value, fill = variable)) +
-        geom_boxplot() +
-        labs(title = paste(data.type, metric),
-             x = NULL,
-             y = "-Log10 P-value") +
-        scale_fill_manual(values = my.colors) +
-        theme_classic() +
-        theme(legend.position = "none")
-    }    
- 
-    if(metric == "adjpval"){
-      
-      data$value <- -log10(data$value)
-      
-      # set colors
-      my.colors <- c("adjpval_conc" = "darkolivegreen3", "adjpval_group" = "cornflowerblue")          
-      
-      fin.plot <- ggplot(data, mapping = aes(x = variable, y = value, fill = variable)) +
-        geom_boxplot() +
-        labs(title = paste(data.type, metric),
-             x = NULL,
-             y = "-Log10 Adjusted P-value") +
-        scale_fill_manual(values = my.colors) +
-        theme_classic() +
-        theme(legend.position = "none")
-    }
-       
-    return(fin.plot)
-    
-  }
-  
-  # apply function across all metrics
-  
-  metrics <- c("ES", "Pval", "adjpval")
-  
-  all.metrics <- lapply(metrics, function(x) single.plot(all.results.long, x))
-  
-  return(all.metrics)
-  
-}
-```
-
-### apply to all data types
-
-```{r}
-aov.plot.norm <- aov.box(aov.norm, "Clean Normalized")
-aov.plot.mstus <- aov.box(aov.mstus, "MSTUS Normalized")
-aov.plot.sc <- aov.box(aov.sc, "Suppression Corrected")
-aov.plot.raw <- aov.box(aov.raw, "Clean")
-
-all.lists <- list(aov.plot.raw, aov.plot.sc, aov.plot.mstus, aov.plot.norm)
-
-all_plots <- unlist(all.lists, recursive = FALSE)
-
-# Arrange into a 4-row, 3-column grid
-final_plot <- wrap_plots(all_plots, ncol = 3, nrow = 4)
-
-final_plot
-```
+# Linear models: confirm associations with group and concentration across data types - metabolites
 
 ## Function to write linear models and calculate sum-of-squares for group and conc contributions
 
 ```{r}
-lm.group.conc <- function(data.list, meta.data){
+lm.group.conc <- function(data.list, meta.data, summarize = TRUE, pvals = FALSE){
   # data.list = metabolite abundance data for all labs
   # meta.data = sample meta data
+  # summarize = logical indicating whether to output simplified summary (TRUE) or full LM contribution to variance results (FALSE)
+  # pvals = logical indicating whether to output pvalues associated with each coefficient
   
   # function for one lab
-    lm.one.lab <- function(data, meta.data){
+    lm.one.lab <- function(data, meta.data, summarize = summarize){
     ## run model and extract results
     model <- apply(data, 2, function(x) lm(x ~ meta.data$group + meta.data$concentration))
     
@@ -1296,7 +794,8 @@ lm.group.conc <- function(data.list, meta.data){
     
     results <- lapply(anova.res, function(x) data.frame(Term = rownames(x),
                                                         SumSq = x$`Sum Sq`,
-                                                        PctContribution = round(100 * x$`Sum Sq` / sum(x$`Sum Sq`), 1)
+                                                        PctContribution = round(100 * x$`Sum Sq` / sum(x$`Sum Sq`), 1),
+                                                        PValue = x$`Pr(>F)`
                                                         ))
     ## pull results into clean table
 
@@ -1310,6 +809,10 @@ lm.group.conc <- function(data.list, meta.data){
     # Clean up term names (they'll be like "meta.data$group", "meta.data$concentration", "Residuals")
     results_long$Term <- gsub("meta\\.data\\$", "", results_long$Term)
 
+    if(summarize == TRUE){
+      
+    # export cleaned summary values  
+      
     # Summarize: mean and sd of PctContribution per term, across all metabolites
     summary_stats <- results_long %>%
       group_by(Term) %>%
@@ -1328,13 +831,62 @@ lm.group.conc <- function(data.list, meta.data){
                            summary_stats$Mean[summary_stats$Term == "Residuals"],
                            summary_stats$SD[summary_stats$Term == "Residuals"])
     )
+      
+          if(pvals == TRUE){
+        pval_summary <- results_long %>%
+          filter(Term %in% c("group", "concentration")) %>%
+          group_by(Term) %>%
+          summarise(MeanP = mean(PValue, na.rm = TRUE),
+                    MedianP = median(PValue, na.rm = TRUE),
+                    PctSig = round(100 * mean(PValue < 0.05, na.rm = TRUE), 1),
+                    .groups = "drop")
 
-return(final_result)
+        final_result$group_pval <- sprintf(
+          "mean=%.3g, median=%.3g, %%sig=%.1f",
+          pval_summary$MeanP[pval_summary$Term == "group"],
+          pval_summary$MedianP[pval_summary$Term == "group"],
+          pval_summary$PctSig[pval_summary$Term == "group"]
+        )
+        final_result$concentration_pval <- sprintf(
+          "mean=%.3g, median=%.3g, %%sig=%.1f",
+          pval_summary$MeanP[pval_summary$Term == "concentration"],
+          pval_summary$MedianP[pval_summary$Term == "concentration"],
+          pval_summary$PctSig[pval_summary$Term == "concentration"]
+        )
+      }
+    
+    } else {
+    
+      if(pvals == TRUE){
+        final_result <- results_long %>%
+          select(Metabolite, Term, PctContribution, PValue) %>%
+          pivot_wider(
+            names_from = Term,
+            values_from = c(PctContribution, PValue)
+          )
+        # columns will be named e.g. PctContribution_group, PValue_group, etc.
+      } else {
+        final_result <- results_long %>%
+          select(Metabolite, Term, PctContribution) %>%
+          pivot_wider(
+            names_from = Term,
+            values_from = PctContribution
+          )
+      }
+
+    }
+     return(final_result) 
     }
     
     # apply to all labs
     
-  result_all <- lapply(data.list, function(x) lm.one.lab(x, meta.data))
+  result_all <- lapply(data.list, function(x) lm.one.lab(x, meta.data, summarize))
+  
+  for(lab in 1:length(result_all)){
+    
+    result_all[[lab]]$lab <- names(result_all)[[lab]]
+    
+  }
   
   fin_result_all <- do.call(rbind, result_all)
 
@@ -1343,19 +895,23 @@ return(final_result)
 }
 ```
 
-## Apply LM function to data types
+### LM: Metabolite ~ group + concentration
+
+#### Apply LM function to data types and summarize results
 
 ```{r}
-raw.lm <- lm.group.conc(lapply(raw.impute, log2), meta.data)
-sc.lm <- lm.group.conc(lapply(sc.impute, log2), meta.data)
-mstus.lm <- lm.group.conc(lapply(mstus.impute, log2), meta.data)
-norm.lm <- lm.group.conc(lapply(norm.impute, log2), meta.data)
+raw.lm <- lm.group.conc(lapply(raw.impute, log2), meta.data, summarize = T, pvals = T)
+sc.lm <- lm.group.conc(lapply(sc.impute, log2), meta.data, summarize = T, pvals = T)
+mstus.lm <- lm.group.conc(lapply(mstus.impute, log2), meta.data, summarize = T, pvals = T)
+norm.lm <- lm.group.conc(lapply(norm.impute, log2), meta.data, summarize = T, pvals = T)
 ```
 
-## Plot relative contributions per data type
+#### Plot relative contributions per data type (stacked bar plot)
 
 ```{r}
 extract_mean <- function(x) as.numeric(sub(" ±.*", "", x))
+
+extract_sd <- function(x) as.numeric(sub("^.*± ", "", x))
 
 summarize_table <- function(df, dtype_name) {
   data.frame(
@@ -1363,7 +919,10 @@ summarize_table <- function(df, dtype_name) {
     Term = c("group", "concentration", "residuals"),
     Mean = c(mean(extract_mean(df$group)),
              mean(extract_mean(df$concentration)),
-             mean(extract_mean(df$Residuals)))
+             mean(extract_mean(df$Residuals))),
+    SD = c(round(mean(extract_sd(df$group)), 0),
+             round(mean(extract_sd(df$concentration)), 0),
+             round(mean(extract_sd(df$Residuals)), 0))    
   )
 }
 
@@ -1383,8 +942,8 @@ plot_data$Term <- factor(plot_data$Term, levels = c("group", "concentration", "r
 
 ggplot(plot_data, aes(x = DataType, y = Mean, fill = Term)) +
   geom_bar(stat = "identity", width = 0.6) +
-  geom_text(aes(label = paste0(round(Mean, 1), "%")),
-            position = position_stack(vjust = 0.5), size = 3.5, color = "white") +
+  geom_text(aes(label = paste0(round(Mean, 1), "% ± ", SD)),
+            position = position_stack(vjust = 0.5), size = 3, color = "white") +
   scale_fill_manual(values = c("group" = "cornflowerblue", "concentration" = "darkolivegreen3", "residuals" = "#898781")) +
   labs(x = NULL, y = "Mean % contribution", fill = NULL,
        title = "Relative contribution to model by data type") +
@@ -1394,10 +953,419 @@ ggplot(plot_data, aes(x = DataType, y = Mean, fill = Term)) +
 ggsave(ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/lm_contributions_barchart.png", width = 12, height = 8))
 ```
 
+#### Plot relative contributions per data type (faceted box plot)
+
+```{r}
+# Apply LM function to data types and summarize results
+raw.lm.all <- lm.group.conc(lapply(raw.impute, log2), meta.data, summarize = F)
+sc.lm.all <- lm.group.conc(lapply(sc.impute, log2), meta.data, summarize = F)
+mstus.lm.all <- lm.group.conc(lapply(mstus.impute, log2), meta.data, summarize = F)
+norm.lm.all <- lm.group.conc(lapply(norm.impute, log2), meta.data, summarize = F)
+
+# Plot as faceted box plots
+
+# Prepare data (concatenate data types)
+raw.lm.all$data_type <- "Clean"
+sc.lm.all$data_type <- "Suppression Corrected"
+mstus.lm.all$data_type <- "MSTUS Normalized"
+norm.lm.all$data_type <- "Clean Normalized"
+
+all.lm.all <- rbind(raw.lm.all, sc.lm.all, mstus.lm.all, norm.lm.all)
+
+# Prepare for ggplot
+
+all.lm.plot <- all.lm.all %>%
+    pivot_longer(
+    cols = c(group, concentration, Residuals),
+    names_to = "Term",
+    values_to = "PctContribution"
+  )
+
+#  Set factor levels to control facet order
+all.lm.plot$Term <- factor(all.lm.plot$Term,
+                          levels = c("group", "concentration", "Residuals"))
+
+# Set factor levels to control x-axis order
+all.lm.plot$data_type <- factor(all.lm.plot$data_type,
+                               levels = c("Clean", "Suppression Corrected",
+                                          "MSTUS Normalized", "Clean Normalized"))
+
+# Named color vector, keyed to the factor levels
+term_colors <- c(
+  "group" = "cornflowerblue",
+  "concentration" = "darkolivegreen3",
+  "Residuals" = "#898781"
+)
+
+ggplot(all.lm.plot, aes(x = data_type, y = PctContribution, fill = Term)) +
+  geom_boxplot() +
+  facet_wrap(~ Term, ncol = 1, scales = "free_y") +
+  scale_fill_manual(values = term_colors) +
+  labs(x = "Data Type", y = "% Contribution") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/lm_contributions_boxplot.png", width = 12, height = 8)
+```
+
+### LM: PCA scores ~ group + concentration
+
+```{r}
+# Calculate PCAs
+raw.pca <- lapply(raw.impute, function(x) make.pca(x, meta.data, "group", group.shape.name = "concentration", do.log2 = T, centered = T, scaled = T, graph = F))
+sc.pca <- lapply(sc.impute, function(x) make.pca(x, meta.data, "group", group.shape.name = "concentration", do.log2 = T, centered = T, scaled = T, graph = F))
+mstus.pca <- lapply(mstus.impute, function(x) make.pca(x, meta.data, "group", group.shape.name = "concentration", do.log2 = T, centered = T, scaled = T, graph = F))
+norm.pca <- lapply(norm.impute, function(x) make.pca(x, meta.data, "group", group.shape.name = "concentration", do.log2 = T, centered = T, scaled = T, graph = F))
+
+# Extract scores for PC1
+raw.scores <- lapply(raw.pca, function(x) x$x[,c("PC1", "PC2", "PC3")])
+sc.scores <- lapply(sc.pca, function(x) x$x[,c("PC1", "PC2", "PC3")])
+mstus.scores <- lapply(mstus.pca, function(x) x$x[,c("PC1", "PC2", "PC3")])
+norm.scores <- lapply(norm.pca, function(x) x$x[,c("PC1", "PC2", "PC3")])
+
+# Apply linear model function
+raw.lm.pc <- lm.group.conc(raw.scores, meta.data, summarize = F, pvals = T)
+raw.lm.pc$data_type <- "Clean"
+
+sc.lm.pc <- lm.group.conc(sc.scores, meta.data, summarize = F, pvals = T)
+sc.lm.pc$data_type <- "Suppression Corrected"
+
+mstus.lm.pc <- lm.group.conc(mstus.scores, meta.data, summarize = F, pvals = T)
+mstus.lm.pc$data_type <- "MSTUS Normalized"
+
+norm.lm.pc <- lm.group.conc(norm.scores, meta.data, summarize = F, pvals = T)
+norm.lm.pc$data_type <- "Clean Normalized"
+
+# Concatenate data for plotting
+all.lm.pc <- rbind(raw.lm.pc, sc.lm.pc, mstus.lm.pc, norm.lm.pc)
+```
+
+#### Extract % explained variance for each PC
+
+```{r}
+raw.exp.var <- exp.var(raw.pca, n.pc = 3)
+sc.exp.var <- exp.var(sc.pca, n.pc = 3)
+mstus.exp.var <- exp.var(mstus.pca, n.pc = 3)
+norm.exp.var <- exp.var(norm.pca, n.pc = 3)
+
+total.var <- rbind(raw.exp.var, sc.exp.var, mstus.exp.var, norm.exp.var)
+
+colMeans(total.var)
+
+apply(total.var, 2, sd)
+```
 
 
+#### Summarize labs: plot explained variance and p-values for each data type 
+
+##### PC1
+
+```{r}
+# --- Set consistent factor levels for x-axis order and colors ---
+data_type_order <- c("Clean", "Suppression Corrected", "MSTUS Normalized", "Clean Normalized")
+
+term_colors_pct <- c("group" = "cornflowerblue", "concentration" = "darkolivegreen3", "Residuals" = "darkgrey")
+term_colors_pval <- c("group" = "cornflowerblue", "concentration" = "darkolivegreen3")
+
+# --- Prep data: filter to PC1, reshape to long format for plotting ---
+
+# Plot 1 data: PctContribution for group, concentration, Residuals
+pct_long <- all.lm.pc %>%
+  filter(Metabolite == "PC1") %>%
+  select(data_type, PctContribution_group, PctContribution_concentration, PctContribution_Residuals) %>%
+  pivot_longer(
+    cols = starts_with("PctContribution_"),
+    names_to = "Term",
+    names_prefix = "PctContribution_",
+    values_to = "PctContribution"
+  ) %>%
+  group_by(data_type, Term) %>%
+  summarise(MeanPct = mean(PctContribution, na.rm = TRUE),
+            SDPct = sd(PctContribution, na.rm = TRUE),
+            .groups = "drop") %>%
+  mutate(
+    Term = factor(Term, levels = c("group", "concentration", "Residuals")),
+    data_type = factor(data_type, levels = data_type_order),
+    Label = sprintf("%.1f \u00b1 %.1f", MeanPct, SDPct)
+  ) %>%
+  # KEY FIX: geom_col stacks in REVERSE factor level order (last level at bottom-most
+  # drawn first, i.e. first level ends up on top). To get label y-positions that match
+  # what's actually drawn, sort by the reverse of the factor order before cumsum().
+  arrange(data_type, desc(Term)) %>%
+  group_by(data_type) %>%
+  mutate(
+    StackTop = cumsum(MeanPct),
+    LabelY = StackTop - MeanPct / 2
+  ) %>%
+  ungroup()
+
+# Plot 2 data: -log10(p-value) for group and concentration only
+pval_long <- all.lm.pc %>%
+  filter(Metabolite == "PC1") %>%
+  select(data_type, PValue_group, PValue_concentration) %>%
+  pivot_longer(
+    cols = starts_with("PValue_"),
+    names_to = "Term",
+    names_prefix = "PValue_",
+    values_to = "PValue"
+  ) %>%
+  mutate(NegLogP = -log10(PValue)) %>%
+  group_by(data_type, Term) %>%
+  #summarise(MeanNegLogP = mean(NegLogP, na.rm = TRUE),
+            #SDNegLogP = sd(NegLogP, na.rm = TRUE),
+            #MeanP = mean(PValue, na.rm = TRUE),
+            #.groups = "drop") %>%
+  mutate(
+    Term = factor(Term, levels = c("group", "concentration")),
+    data_type = factor(data_type, levels = data_type_order),
+  #  Label = sprintf("%.1f \u00b1 %.1f\n(p=%.2g)", MeanNegLogP, SDNegLogP, MeanP)
+  )
+
+# --- Plot 1: stacked bar of variance contribution ---
+pct_long <- pct_long %>%
+  mutate(x_num = as.numeric(factor(data_type)))
+
+p1 <- ggplot(pct_long, aes(x = x_num, y = MeanPct, fill = Term)) +
+  geom_col(aes(x = x_num - 0.1), position = "stack", width = 0.4) +
+  geom_text(aes(x = x_num + 0.15, y = LabelY, label = Label), 
+            color = "black", size = 3, hjust = 0) +
+  facet_wrap(~ "PC1") +
+  scale_fill_manual(values = term_colors_pct) +
+  scale_x_continuous(breaks = unique(pct_long$x_num), 
+                      labels = unique(pct_long$data_type)) +
+  labs(y = "% Contribution to Variance", x = NULL, fill = "Term",
+       title = "Variance Contribution by Term (PC1)") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        legend.position = "top") +
+  coord_cartesian(xlim = c(0.5, length(unique(pct_long$x_num)) + 0.5))
 
 
+# --- Plot 2: dodged bar of -log10(p-value) ---
+p2 <- ggplot(pval_long, aes(x = data_type, y = NegLogP, fill = Term)) +
+  geom_boxplot(position = position_dodge(width = 0.9)) +
+ # geom_text(aes(label = Label), position = position_dodge(width = 0.9),
+  #          vjust = -0.1, color = "black", size = 3) +
+  facet_wrap(~ "PC1") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "black") +
+  scale_fill_manual(values = term_colors_pval) +
+  labs(y = expression(-log[10](p*"-value")), x = "", fill = "Term",
+       title = "Significance by Term (PC1)") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank()) +
+  coord_cartesian(clip = "off") 
+# + expand_limits(y = max(pval_long$NegLogP + pval_long$SDNegLogP) * 1.15)
+
+# --- Combine, stacked vertically ---
+both.plot <- p1 / p2
+
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/lm_contributions_PC1_both.png", width = 12, height = 8)
+```
+
+##### PC2
+
+```{r}
+# --- Set consistent factor levels for x-axis order and colors ---
+data_type_order <- c("Clean", "Suppression Corrected", "MSTUS Normalized", "Clean Normalized")
+
+term_colors_pct <- c("group" = "cornflowerblue", "concentration" = "darkolivegreen3", "Residuals" = "darkgrey")
+term_colors_pval <- c("group" = "cornflowerblue", "concentration" = "darkolivegreen3")
+
+# --- Prep data: filter to PC1, reshape to long format for plotting ---
+
+# Plot 1 data: PctContribution for group, concentration, Residuals
+pct_long <- all.lm.pc %>%
+  filter(Metabolite == "PC2") %>%
+  select(data_type, PctContribution_group, PctContribution_concentration, PctContribution_Residuals) %>%
+  pivot_longer(
+    cols = starts_with("PctContribution_"),
+    names_to = "Term",
+    names_prefix = "PctContribution_",
+    values_to = "PctContribution"
+  ) %>%
+  group_by(data_type, Term) %>%
+  summarise(MeanPct = mean(PctContribution, na.rm = TRUE),
+            SDPct = sd(PctContribution, na.rm = TRUE),
+            .groups = "drop") %>%
+  mutate(
+    Term = factor(Term, levels = c("group", "concentration", "Residuals")),
+    data_type = factor(data_type, levels = data_type_order),
+    Label = sprintf("%.1f \u00b1 %.1f", MeanPct, SDPct)
+  ) %>%
+  # KEY FIX: geom_col stacks in REVERSE factor level order (last level at bottom-most
+  # drawn first, i.e. first level ends up on top). To get label y-positions that match
+  # what's actually drawn, sort by the reverse of the factor order before cumsum().
+  arrange(data_type, desc(Term)) %>%
+  group_by(data_type) %>%
+  mutate(
+    StackTop = cumsum(MeanPct),
+    LabelY = StackTop - MeanPct / 2
+  ) %>%
+  ungroup()
+
+# Plot 2 data: -log10(p-value) for group and concentration only
+pval_long <- all.lm.pc %>%
+  filter(Metabolite == "PC2") %>%
+  select(data_type, PValue_group, PValue_concentration) %>%
+  pivot_longer(
+    cols = starts_with("PValue_"),
+    names_to = "Term",
+    names_prefix = "PValue_",
+    values_to = "PValue"
+  ) %>%
+  mutate(NegLogP = -log10(PValue)) %>%
+  group_by(data_type, Term) %>%
+  #summarise(MeanNegLogP = mean(NegLogP, na.rm = TRUE),
+            #SDNegLogP = sd(NegLogP, na.rm = TRUE),
+            #MeanP = mean(PValue, na.rm = TRUE),
+            #.groups = "drop") %>%
+  mutate(
+    Term = factor(Term, levels = c("group", "concentration")),
+    data_type = factor(data_type, levels = data_type_order),
+  #  Label = sprintf("%.1f \u00b1 %.1f\n(p=%.2g)", MeanNegLogP, SDNegLogP, MeanP)
+  )
+
+# --- Plot 1: stacked bar of variance contribution ---
+pct_long <- pct_long %>%
+  mutate(x_num = as.numeric(factor(data_type)))
+
+p1 <- ggplot(pct_long, aes(x = x_num, y = MeanPct, fill = Term)) +
+  geom_col(aes(x = x_num - 0.1), position = "stack", width = 0.4) +
+  geom_text(aes(x = x_num + 0.15, y = LabelY, label = Label), 
+            color = "black", size = 3, hjust = 0) +
+  facet_wrap(~ "PC2") +
+  scale_fill_manual(values = term_colors_pct) +
+  scale_x_continuous(breaks = unique(pct_long$x_num), 
+                      labels = unique(pct_long$data_type)) +
+  labs(y = "% Contribution to Variance", x = NULL, fill = "Term",
+       title = "Variance Contribution by Term (PC2)") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        legend.position = "top") +
+  coord_cartesian(xlim = c(0.5, length(unique(pct_long$x_num)) + 0.5))
 
 
+# --- Plot 2: dodged bar of -log10(p-value) ---
+p2 <- ggplot(pval_long, aes(x = data_type, y = NegLogP, fill = Term)) +
+  geom_boxplot(position = position_dodge(width = 0.9)) +
+ # geom_text(aes(label = Label), position = position_dodge(width = 0.9),
+  #          vjust = -0.1, color = "black", size = 3) +
+  facet_wrap(~ "PC2") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "black") +
+  scale_fill_manual(values = term_colors_pval) +
+  labs(y = expression(-log[10](p*"-value")), x = "", fill = "Term",
+       title = "Significance by Term (PC1)") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank()) +
+  coord_cartesian(clip = "off") 
+# + expand_limits(y = max(pval_long$NegLogP + pval_long$SDNegLogP) * 1.15)
 
+# --- Combine, stacked vertically ---
+both.plot <- p1 / p2
+
+p1
+```
+
+##### PC3
+
+```{r}
+# --- Set consistent factor levels for x-axis order and colors ---
+data_type_order <- c("Clean", "Suppression Corrected", "MSTUS Normalized", "Clean Normalized")
+
+term_colors_pct <- c("group" = "cornflowerblue", "concentration" = "darkolivegreen3", "Residuals" = "darkgrey")
+term_colors_pval <- c("group" = "cornflowerblue", "concentration" = "darkolivegreen3")
+
+# --- Prep data: filter to PC1, reshape to long format for plotting ---
+
+# Plot 1 data: PctContribution for group, concentration, Residuals
+pct_long <- all.lm.pc %>%
+  filter(Metabolite == "PC3") %>%
+  select(data_type, PctContribution_group, PctContribution_concentration, PctContribution_Residuals) %>%
+  pivot_longer(
+    cols = starts_with("PctContribution_"),
+    names_to = "Term",
+    names_prefix = "PctContribution_",
+    values_to = "PctContribution"
+  ) %>%
+  group_by(data_type, Term) %>%
+  summarise(MeanPct = mean(PctContribution, na.rm = TRUE),
+            SDPct = sd(PctContribution, na.rm = TRUE),
+            .groups = "drop") %>%
+  mutate(
+    Term = factor(Term, levels = c("group", "concentration", "Residuals")),
+    data_type = factor(data_type, levels = data_type_order),
+    Label = sprintf("%.1f \u00b1 %.1f", MeanPct, SDPct)
+  ) %>%
+  # KEY FIX: geom_col stacks in REVERSE factor level order (last level at bottom-most
+  # drawn first, i.e. first level ends up on top). To get label y-positions that match
+  # what's actually drawn, sort by the reverse of the factor order before cumsum().
+  arrange(data_type, desc(Term)) %>%
+  group_by(data_type) %>%
+  mutate(
+    StackTop = cumsum(MeanPct),
+    LabelY = StackTop - MeanPct / 2
+  ) %>%
+  ungroup()
+
+# Plot 2 data: -log10(p-value) for group and concentration only
+pval_long <- all.lm.pc %>%
+  filter(Metabolite == "PC3") %>%
+  select(data_type, PValue_group, PValue_concentration) %>%
+  pivot_longer(
+    cols = starts_with("PValue_"),
+    names_to = "Term",
+    names_prefix = "PValue_",
+    values_to = "PValue"
+  ) %>%
+  mutate(NegLogP = -log10(PValue)) %>%
+  group_by(data_type, Term) %>%
+  #summarise(MeanNegLogP = mean(NegLogP, na.rm = TRUE),
+            #SDNegLogP = sd(NegLogP, na.rm = TRUE),
+            #MeanP = mean(PValue, na.rm = TRUE),
+            #.groups = "drop") %>%
+  mutate(
+    Term = factor(Term, levels = c("group", "concentration")),
+    data_type = factor(data_type, levels = data_type_order),
+  #  Label = sprintf("%.1f \u00b1 %.1f\n(p=%.2g)", MeanNegLogP, SDNegLogP, MeanP)
+  )
+
+# --- Plot 1: stacked bar of variance contribution ---
+pct_long <- pct_long %>%
+  mutate(x_num = as.numeric(factor(data_type)))
+
+p1 <- ggplot(pct_long, aes(x = x_num, y = MeanPct, fill = Term)) +
+  geom_col(aes(x = x_num - 0.1), position = "stack", width = 0.4) +
+  geom_text(aes(x = x_num + 0.15, y = LabelY, label = Label), 
+            color = "black", size = 3, hjust = 0) +
+  facet_wrap(~ "PC3") +
+  scale_fill_manual(values = term_colors_pct) +
+  scale_x_continuous(breaks = unique(pct_long$x_num), 
+                      labels = unique(pct_long$data_type)) +
+  labs(y = "% Contribution to Variance", x = NULL, fill = "Term",
+       title = "Variance Contribution by Term (PC3)") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        legend.position = "top") +
+  coord_cartesian(xlim = c(0.5, length(unique(pct_long$x_num)) + 0.5))
+
+
+# --- Plot 2: dodged bar of -log10(p-value) ---
+p2 <- ggplot(pval_long, aes(x = data_type, y = NegLogP, fill = Term)) +
+  geom_boxplot(position = position_dodge(width = 0.9)) +
+ # geom_text(aes(label = Label), position = position_dodge(width = 0.9),
+  #          vjust = -0.1, color = "black", size = 3) +
+  facet_wrap(~ "PC3") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "black") +
+  scale_fill_manual(values = term_colors_pval) +
+  labs(y = expression(-log[10](p*"-value")), x = "", fill = "Term",
+       title = "Significance by Term (PC3)") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank()) +
+  coord_cartesian(clip = "off") 
+# + expand_limits(y = max(pval_long$NegLogP + pval_long$SDNegLogP) * 1.15)
+
+# --- Combine, stacked vertically ---
+both.plot <- p1 / p2
+
+p1
+```

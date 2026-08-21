@@ -363,49 +363,110 @@ text(bc_0.5_rep1, bc_0.5_rep2, row.names(lab3.bc), cex = 0.7)
 # Euclidean distance of sample pairs
 
 ```{r}
+# raw distances
 euc.data <- lapply(norm.impute, euclid.func)
 
+# scaled to number of features
+for(lab in 1:length(euc.data)){
+  
+  euc.data[[lab]]$feat.scale.value <- euc.data[[lab]]$value / sqrt(ncol(norm.impute[[lab]]))  
+  
+}
+
+# scaled to max Euclidean distance
+for(lab in 1:length(euc.data)){
+  
+  euc.data[[lab]]$max.scale.value <- euc.data[[lab]]$value / max(euc.data[[lab]]$value)  
+  
+}
+
+```
+
+## Plot Euclidean distances
+
+```{r}
 # heatmaps
 #euc.plots <- mapply(function(x, y) euclid.func(x, y), norm.impute, names(norm.impute))
 #ggarrange(plotlist = euc.plots, nrow = 2, ncol = 4)
 
 # boxplots
-euclid.box(euc.data, meta.data)
+euclid.box(euc.data, data.type = "raw", meta.data)
 ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/boxplots_euclidean_distances.png", width = 16, height = 12, dpi = 600)
 
-# summary stats
-    # Mark true duplicates
-     mark.dup <- function(dist.long){
-       # dist.long = dist data for one lab
+euclid.box(euc.data, data.type = "feat.scaled", meta.data)
+
+euclid.box(euc.data, data.type = "max.scaled", meta.data)
+
+# Plot scaled distances in one plot
+
+## mark duplicates
+plot.data <- lapply(euc.data, mark.dup)
+
+## remove same samples
+plot.data<- lapply(plot.data, function (x) x[-which(x$dup == "X" & x$value == 0),])
+
+## make one dataframe
+plot.data <- do.call(rbind, lapply(names(plot.data), function(nm) {
+  df <- plot.data[[nm]]
+  data.frame(max.scale.value = df$max.scale.value,
+             dup = df$dup,
+             lab = nm)
+}))
+
+## plot    
+
+plot.data <- plot.data %>%
+         mutate(dup_status = ifelse(is.na(dup), "Non-duplicate", "Duplicate"))
        
-       dist.long$dup <- NA
-        for(row in 1:nrow(dist.long)){
-          
-          samp1 <- gsub("_rep.*", "", dist.long$Sample1[row])
-          samp2 <- gsub("_rep.*", "", dist.long$Sample2[row])
-          
-          if(samp1 == samp2){
-            
-            dist.long$dup[row] <- "X"  
-          
-          }
-        }
-       return(dist.long)
-     }
-    
-     euc.data <- lapply(euc.data, mark.dup)
+ggplot(plot.data, aes(x = lab, y = max.scale.value, fill = dup_status)) +
+  geom_boxplot(outlier.shape = 21, outlier.size = 1.5, position = position_dodge(width = 0.8)) +
+  labs(
+    x = "",
+    y = "Scaled Euclidean Distance",
+    fill = ""
+  ) +
+  theme_minimal() +
+  theme(
+    text = element_text(size = 40),
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+    legend.position = "right"
+  )
+ggsave("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/boxplots_euclidean_distances.png", width = 16, height = 12, dpi = 600)
+```
+
+## Summary stats of Euclidean distances
+
+```{r}
+euc.data <- lapply(euc.data, mark.dup)
 
 # mean true duplicate distances
 dup <- lapply(euc.data, function(x) x[which(x$dup == "X" &
                                               x$value != 0 &
                                               !is.na(x$value)),])
 
-dup.dist <- do.call(rbind, lapply(dup, function(x) mean(x$value, na.rm = T)))
+dup.dist.mean <- do.call(rbind, lapply(dup, function(x) mean(x$value, na.rm = T)))
 
 nondup <- lapply(euc.data, function(x) x[which(is.na(x$dup) &
                                               x$value != 0 &
                                               !is.na(x$value)),])
-nondup.dist <- do.call(rbind, lapply(nondup, function(x) mean(x$value, na.rm = T)))
 
-rel.dist <- dup.dist / nondup.dist
+nondup.dist.mean <- do.call(rbind, lapply(nondup, function(x) mean(x$value, na.rm = T)))
+
+# T-test of true vs. non-duplicates
+
+dup.dist <- do.call(rbind, lapply(dup, function(x) x$value))
+
+nondup.dist <- do.call(rbind, lapply(nondup, function(x) x$value))
+
+ttest.dist <- data.frame(matrix(nrow = nrow(dup.dist)))
+
+for(row in 1:nrow(dup.dist)){
+  
+  test <- t.test(log2(dup.dist[row,]), log2(nondup.dist[row,]))
+  
+  pval <- test$p.value
+
+  ttest.dist[row,] <- format(pval, scientific = T)
+}
+
 ```

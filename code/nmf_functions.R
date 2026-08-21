@@ -49,14 +49,43 @@ nmf_performance <- function(data.list, rank = 3, seed = 3, meta.data){
   return(do.call(rbind, all.perf))
 }
 
+# Estimated variance (see if same/similar to residuals method, above)
+
+nmf_evar <- function(data.list, rank = 3, seed = 3, meta.data){
+  # data = list of data from all labs
+  # rank = rank for determining basis (3 for this study design because A, B, C groups)
+  # meta.data = meta data with sample info
+  
+  # Function for one lab
+  
+  one.lab.var <- function(data, rank, seed, meta.data){
+    
+    model <- nmf(data, rank, seed = seed)
+    
+    # Estimated variance 
+    est.var <- evar(model, as.matrix(data))
+    
+    return(data.frame("explained_variance" = est.var))
+    
+  }
+  
+  # Apply across labs
+  
+  all.var <- lapply(data.list, function(x) one.lab.var(x, rank = rank, seed = seed, meta.data = meta.data))
+  
+  return(do.call(rbind, all.var))
+  
+}
 
 # Test different rank values and output plots
 
-nmf_rank <- function(data.list, rank.range = c(seq(2,6)), nrun = 30, randomize = FALSE){
+nmf_rank <- function(data.list, rank.range = c(seq(2,6)), nrun = 30, randomize = FALSE,
+                     plot.list = c("evar", "silhouette")){
   # data = list of data from all labs
   # rank.range = range of ranks to test
   # nrun = number of runs to do on each rank tested
   # randomize = logical indicating whether to randomize data before input
+  # plot.list = list of metrics to plot. Includes "cophenetic", "dispersion", "evar", "residuals", "rss", "silhouette", "sparseness"
   
   # randomize data
   
@@ -88,7 +117,7 @@ nmf_rank <- function(data.list, rank.range = c(seq(2,6)), nrun = 30, randomize =
                                  model = NULL, verbose = FALSE, stop = FALSE)
     
     rank.plot <- plot(rank.est, y = NULL,
-                      what = c("evar", "silhouette"), 
+                      what = plot.list, 
                       na.rm = FALSE, xname = "x", yname = "y",
                       xlab = "Factorization rank", ylab = "",
                       main = paste("NMF Rank Evaluation", lab))
@@ -104,7 +133,7 @@ nmf_rank <- function(data.list, rank.range = c(seq(2,6)), nrun = 30, randomize =
 
 # Calculate W matrix and plot heatmaps
 
-nmf_basis <- function(data, rank = 3, meta.data, meta.col = c("group", "concentration"), print.heatmap = TRUE, seed = 3){
+nmf_basis <- function(data, rank = 3, meta.data, meta.col = c("group", "concentration", "both"), print.heatmap = TRUE, seed = 3){
   # data = list of data from all labs
   # rank = rank for determining basis (3 for this study design because A, B, C groups)
   # meta.data = meta data with sample info
@@ -169,21 +198,35 @@ nmf_basis <- function(data, rank = 3, meta.data, meta.col = c("group", "concentr
       colnames(scale.w) <- seq(1, ncol(scale.w), by = 1)
       
       ## set annotation row
-      if(meta.col == "group"){
+      if(meta.col == "group" |
+         meta.col == "both"){
         rows <- data.frame("group" = gsub("_.*", "", row.names(scale.w)))
       }
       
       if(meta.col == "concentration"){
-        conc <- gsub("_r.*", "", row.names(scale.w))
-        conc <- gsub("*._", "", conc)
+        conc <- gsub("_R.*", "", row.names(scale.w))
+        conc <- gsub(".*_", "", conc)
         rows <- data.frame("concentration" = conc)
+      }
+      
+      if(meta.col == "both"){
+        
+        conc <- gsub("_R.*", "", row.names(scale.w))
+        conc <- gsub(".*_", "", conc)
+        
+        rows <- data.frame(
+          group = meta.data$group,
+          concentration = conc,
+          row.names = rownames(scale.w)
+        )
       }
       
       row.names(rows) <- row.names(scale.w)
       
       # Determine rank labels
       
-      if(meta.col == "group"){
+      if(meta.col == "group" | 
+         meta.col == "both"){
         
         groups <- as.character(rows$group)
         unique.groups <- sort(unique(groups))
@@ -227,7 +270,24 @@ nmf_basis <- function(data, rank = 3, meta.data, meta.col = c("group", "concentr
         annotation_colors <- list(concentration = conc.colors, basis = basis.colors)
         
       }
-      
+
+      if(meta.col == "both"){
+        
+        group.colors <- c("red","orange","brown","purple","gold","darkgreen", "blue")
+        names(group.colors) <- levels(meta.data$group)
+        
+        conc <- gsub("_R.*", "", row.names(scale.w))
+        conc <- gsub(".*_", "", conc)
+        conc.colors <- brewer.pal(length(unique(conc)), "Blues")
+        names(conc.colors) <- unique(conc)
+        
+        basis.colors <- brewer.pal(n = ncol(scale.w), "Paired")
+        
+        annotation_colors <- list(group = group.colors,
+                                  concentration = conc.colors,
+                                  basis = basis.colors)
+        
+      }
       
       ## plot
       
@@ -237,15 +297,16 @@ nmf_basis <- function(data, rank = 3, meta.data, meta.col = c("group", "concentr
                                        cluster_cols = F,
                                        annotation_colors = annotation_colors,
                                        annotation_legend = F,
+                                       show_rownames = F,
                                        treeheight_col = 0,
                                        treeheight_row = 10,
-                                       cellheight = 17,
+                                       cellheight = 25,
                                        fontsize = 16,
                                        fontsize_row = 14,
                                        angle_col = 0,
                                        legend = F,
                                        main = names(data)[[i]])) +
-                                    theme(plot.margin = margin(2, 2, 2, 2))
+                                    theme(plot.margin = margin(2, 10, 2, 10))
       
     }
       
@@ -284,7 +345,7 @@ nmf_basis <- function(data, rank = 3, meta.data, meta.col = c("group", "concentr
       )
     }
     
-    ## ---- place color-scale legend TOP-RIGHT, annotation legend BOTTOM-RIGHT ----
+    # place color-scale legend TOP-RIGHT, annotation legend BOTTOM-RIGHT
     ## each occupies its own half of the legend canvas -> no overlap
     legend.plot <- ggplot() +
       theme_void() +
@@ -296,12 +357,12 @@ nmf_basis <- function(data, rank = 3, meta.data, meta.col = c("group", "concentr
                         xmin = 0.3, xmax = 1, ymin = 0, ymax = 0.45) +
       xlim(0, 1) + ylim(0, 1)
     
-    ## ---- combine 8 equal-size panels + 1 external legend column ----
+    #combine 8 equal-size panels + 1 external legend column 
     panels <- plot_grid(plotlist = heats, ncol = 4, nrow = 2,
                         align = "hv", axis = "tblr",
                         rel_heights = c(1, 1))
     
-    final.plot <- plot_grid(panels, legend.plot, ncol = 2, rel_widths = c(8, 1.5))
+    final.plot <- plot_grid(panels, legend.plot, ncol = 2, rel_widths = c(8.5, 1.5))
     
     print(final.plot)
     
@@ -626,7 +687,13 @@ perm.sig <- function(perm.results, real.results, metric = c("ARI", "Correlation"
     perm_dist <- perm.results[[cols[i]]]
     real_val  <- real.results[which(row.names(real.results) == lab_names[i]),]
     
-    (1 + sum(perm_dist >= real_val)) / (1 + length(perm_dist))
+    prob <- sum(perm_dist >= real_val) / length(perm_dist)
+    
+    if(prob == 0){
+      
+      prob <- "< 1 E -3"
+       
+    }
     
   })
   

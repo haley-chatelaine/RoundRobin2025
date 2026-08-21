@@ -27,8 +27,8 @@ lapply(norm.impute, function(x) boxplot((apply(x, 2, as.numeric)), main = ""))
 ```{r}
 ranks <- c(2, 3, 4, 5, 6)
 
-true.ranks <- nmf_rank(norm.impute, rank.range = ranks, nrun = 30, randomize = FALSE)
-rando.ranks <- nmf_rank(norm.impute, rank.range = ranks, nrun = 30, randomize = TRUE)
+true.ranks <- nmf_rank(norm.impute, rank.range = ranks, nrun = 30, randomize = FALSE, plot.list = c("evar", "rss", "silhouette"))
+rando.ranks <- nmf_rank(norm.impute, rank.range = ranks, nrun = 30, randomize = TRUE, plot.list = c("evar", "rss", "silhouette"))
 
 grid.arrange(grobs = true.ranks, ncol = 4, top = "Real data")
 grid.arrange(grobs = rando.ranks, ncol = 4, top = "Randomized data")
@@ -38,14 +38,21 @@ grid.arrange(grobs = rando.ranks, ncol = 4, top = "Randomized data")
 
 ```{r}
 all.perf <- nmf_performance(norm.impute, rank = 3, seed = 3, meta.data)
+
+# see if evar() has same results
+all.var <- nmf_evar(norm.impute, rank = 3, seed = 3, meta.data)
 ```
 
 # Run NMF, plot heatmaps, and calculate performance of clustering 
 
 ```{r}
-png("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_heatmap_WITH_dupes.png", width = 36, height = 18, unit = "in", res = 600)
+png("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_heatmap_WITH_dupes.png", width = 36, height = 18, units = "in", res = 600)
 
 w <- nmf_basis(norm.impute, 3, meta.data, "group", print.heatmap = T, seed = 3)
+
+png("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/outputs/NMF_heatmap_WITH_dupes_w_conc.png", width = 40, height = 30, units = "in", res = 600)
+
+w <- nmf_basis(norm.impute, 3, meta.data, "both", print.heatmap = T, seed = 3)
 
 ```
 
@@ -95,7 +102,11 @@ save(scores, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher
 
 ```{r}
 # Run Test
-w.1000 <- permute.w(norm.impute, 1000, meta.data)
+#w.1000 <- permute.w(norm.impute, 1000, meta.data)
+
+save(w.1000, comp.found.na.filter, file = "/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_1000_iterations.RData")
+
+load("/Users/chatelaineha/Documents/Beecher_Collaboration/Writing/data_code/data/biomarker_input/NMF_1000_iterations.RData")
 
 # Report significance
 ari.p <- perm.sig(w.1000, ari, "ARI")
@@ -147,5 +158,4 @@ accuracy_summary <- data.frame(
 )
 
 accuracy_summary
-
 ```
